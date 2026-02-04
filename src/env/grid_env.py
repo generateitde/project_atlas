@@ -14,7 +14,7 @@ from src.env import encoding
 from src.env.modes import Mode, create_mode
 from src.env.rewards import compute_reward
 from src.env import rules
-from src.env.tools import break_tile, inspect, jump, move, speak
+from src.env.tools import ask_human, break_tile, inspect, jump, move, speak
 from src.env.world_gen import default_spawn, generate_world
 
 
