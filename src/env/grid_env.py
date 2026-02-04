@@ -38,6 +38,8 @@ class World:
         return self.tiles[y, x]
 
     def is_passable(self, pos: tuple[int, int]) -> bool:
+        if not self.in_bounds(pos):
+            return False
         tile = self.tiles[pos[1], pos[0]]
         return tile in {TileType.EMPTY, TileType.GOAL, TileType.FLAG, TileType.DOOR_OPEN, TileType.PLATFORM, TileType.LADDER}
 
