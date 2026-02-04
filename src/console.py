@@ -16,9 +16,9 @@ class Console:
     help_text: str = field(
         default_factory=lambda: (
             "help | world list | world switch <preset> <seed> | mode set <mode> <json_params> | "
-            "goal set <json_goal> | enemy spawn <type> <x> <y> <hp> <exp> | item spawn <type> <x> <y> | "
-            "teleport <human|ai_atlas> <x> <y> | pause ai | resume ai | save | load | reset episode | "
-            "print state | print map | agent info"
+            "goal set <text> | ai mode <explore|query> | control <human|ai_atlas> | enemy spawn <type> <x> <y> <hp> <exp> | "
+            "item spawn <type> <x> <y> | teleport <human|ai_atlas> <x> <y> | pause ai | resume ai | "
+            "save | load | reset episode | print state | print map | agent info"
         )
     )
 
@@ -40,6 +40,31 @@ class Console:
             params = json.loads(" ".join(parts[3:]) or "{}")
             game.env.set_mode(mode_name, params)
             return f"mode set to {mode_name}"
+        if parts[:2] == ["goal", "set"] and len(parts) >= 3:
+            raw_goal = " ".join(parts[2:]).strip()
+            goal_text = raw_goal
+            if raw_goal.startswith("{"):
+                try:
+                    payload = json.loads(raw_goal)
+                    goal_text = payload.get("text", raw_goal)
+                except json.JSONDecodeError:
+                    goal_text = raw_goal
+            game.goal_text = goal_text
+            return f"goal set to: {goal_text}"
+        if parts[:2] == ["ai", "mode"] and len(parts) >= 3:
+            mode = parts[2].lower()
+            if mode in {"explore", "query"}:
+                game.ai_mode = mode
+                game.waiting_for_response = False
+                game.steps_since_question = 0
+                return f"AI mode set to {mode}"
+            return "unknown AI mode (use explore or query)"
+        if parts[0] == "control" and len(parts) >= 2:
+            target = parts[1]
+            if target in {"human", "ai_atlas"}:
+                game.keyboard.set_target(target)
+                return f"keyboard control set to {target}"
+            return "unknown control target (use human or ai_atlas)"
         if parts[:2] == ["teleport"] and len(parts) >= 4:
             target = parts[1]
             x, y = int(parts[2]), int(parts[3])
