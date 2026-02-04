@@ -13,7 +13,7 @@ def build_model(env, config: AtlasConfig) -> RecurrentPPO:
         "net_arch": [config.training.policy_hidden_size],
     }
     model = RecurrentPPO(
-        "MlpLstmPolicy",
+        "MultiInputLstmPolicy",
         env,
         n_steps=config.training.n_steps,
         batch_size=config.training.batch_size,
