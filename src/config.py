@@ -18,11 +18,20 @@ class ToggleConfig(BaseModel):
 class RenderingConfig(BaseModel):
     tile_size: int
     fps: int
+    fullscreen: bool
 
 
 class TimingConfig(BaseModel):
     env_step_hz: int
     agent_step_hz: int
+
+
+class ControlsConfig(BaseModel):
+    move_left: list[str]
+    move_right: list[str]
+    jump: list[str]
+    break_tile: list[str]
+    inspect: list[str]
 
 
 class TrainingConfig(BaseModel):
@@ -66,6 +75,7 @@ class AtlasConfig(BaseModel):
     toggles: ToggleConfig
     rendering: RenderingConfig
     timing: TimingConfig
+    controls: ControlsConfig
     training: TrainingConfig
     world: WorldConfig
     progression: ProgressionConfig
