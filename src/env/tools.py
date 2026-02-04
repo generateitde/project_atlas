@@ -41,7 +41,11 @@ def move(world, actor_id: str, direction: str) -> ToolResult:
 
 def jump(world, actor_id: str) -> ToolResult:
     actor = world.get_actor(actor_id)
-    actor.vel.y = -actor.jump_power
+    below = (int(actor.pos.x), int(actor.pos.y + 1))
+    if not world.can_stand_on(below):
+        return ToolResult(False, {}, [], "not_grounded")
+    actor.jump_remaining = int(actor.jump_power)
+    actor.vel.y = 0
     return ToolResult(True, {}, [], None)
 
 
@@ -84,6 +88,7 @@ def speak(world, text: str) -> ToolResult:
 
 def ask_human(world, question_text: str) -> ToolResult:
     world.messages.append(("Atlas (Frage)", question_text))
+    world.pending_question = True
     return ToolResult(True, {}, [Event("atlas_question", {"text": question_text})], None)
 
 
