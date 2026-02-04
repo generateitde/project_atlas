@@ -35,9 +35,13 @@ class World:
 
     def tile_at(self, pos: Vec2) -> TileType:
         x, y = int(pos.x), int(pos.y)
+        if not self.in_bounds((x, y)):
+            return TileType.WALL
         return self.tiles[y, x]
 
     def is_passable(self, pos: tuple[int, int]) -> bool:
+        if not self.in_bounds(pos):
+            return False
         tile = self.tiles[pos[1], pos[0]]
         return tile in {TileType.EMPTY, TileType.GOAL, TileType.FLAG, TileType.DOOR_OPEN, TileType.PLATFORM, TileType.LADDER}
 
@@ -45,6 +49,19 @@ class World:
         if actor_id == self.atlas.entity_id:
             return self.atlas
         return self.human
+
+    def describe_at(self, pos: tuple[int, int]) -> str:
+        x, y = pos
+        if not self.in_bounds(pos):
+            return f"({x}, {y}) is outside the world bounds."
+        tile = self.tiles[y, x]
+        actors = []
+        if (int(self.atlas.pos.x), int(self.atlas.pos.y)) == (x, y):
+            actors.append(f"Atlas (HP {self.atlas.hp}, Lvl {self.atlas.level})")
+        if (int(self.human.pos.x), int(self.human.pos.y)) == (x, y):
+            actors.append("Human")
+        actor_text = f" Actors: {', '.join(actors)}." if actors else ""
+        return f"Tile ({x}, {y}): {tile.value}.{actor_text}"
 
 
 class GridEnv(gym.Env):
