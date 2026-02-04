@@ -14,7 +14,19 @@ class Renderer:
         self.font = pygame.font.SysFont("Consolas", 16)
         self.ui = UIOverlays(self.font)
 
-    def render(self, surface: pygame.Surface, world, mode_name: str, messages: list[tuple[str, str]]) -> None:
+    def render(
+        self,
+        surface: pygame.Surface,
+        world,
+        mode_name: str,
+        messages: list[tuple[str, str]],
+        *,
+        chat_buffer: str,
+        chat_active: bool,
+        console_active: bool,
+        console_buffer: str,
+        console_message: str,
+    ) -> None:
         surface.fill((10, 10, 20))
         for y in range(world.tiles.shape[0]):
             for x in range(world.tiles.shape[1]):
@@ -29,7 +41,7 @@ class Renderer:
         self.ui.draw_text(surface, f"Mode: {mode_name}", (4, hud_y))
         self.ui.draw_text(surface, f"Atlas HP: {atlas.hp} Lvl: {atlas.level} EXP: {atlas.exp}", (4, hud_y + 18))
         controls_y = hud_y + 36
-        self.ui.draw_text(surface, "Console: ` oder F1 | Chat: Enter", (4, controls_y))
+        self.ui.draw_text(surface, "Console: ` oder F1 | Chat: Enter | Fullscreen: F11", (4, controls_y))
         chat_y = controls_y + 18
         if world.pending_question:
             self.ui.draw_text(surface, "Atlas wartet auf Antwort (Enter zum Chat).", (4, chat_y))
@@ -37,5 +49,13 @@ class Renderer:
         for idx, (speaker, msg) in enumerate(messages[-3:]):
             display = msg if msg.startswith("Atlas") else f"{speaker}: {msg}"
             self.ui.draw_text(surface, display, (4, chat_y + idx * 18))
+
+        input_y = chat_y + min(len(messages[-3:]), 3) * 18 + 6
+        if console_active:
+            self.ui.draw_text(surface, "> " + console_buffer, (4, input_y))
+            if console_message:
+                self.ui.draw_text(surface, console_message, (4, input_y + 18))
+        elif chat_active:
+            self.ui.draw_text(surface, "Chat: " + chat_buffer, (4, input_y))
 
         # TODO: Add animations for movement and combat.

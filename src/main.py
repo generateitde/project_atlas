@@ -27,8 +27,9 @@ class AtlasGame:
         self.chat_active = False
         self.chat_buffer = ""
         self.ai_paused = False
+        self.fullscreen = self.config.rendering.fullscreen
         self.renderer = None
-        self.keyboard = KeyboardController(self.env.world)
+        self.keyboard = KeyboardController(self.env.world, self.config.controls)
         self.trainer = AtlasTrainer(self.config, Path("checkpoints"))
         self.trainer.load(self.env)
         self.db = DBLogger(Path("atlas.db"))
@@ -74,7 +75,7 @@ class AtlasGame:
         tile_size = self.config.rendering.tile_size
         width = self.config.world.width
         height = self.config.world.height
-        surface = pygame.display.set_mode((width * tile_size, height * tile_size + 120))
+        surface = self._create_display(width, height, tile_size)
         pygame.display.set_caption("Atlas RL Grid")
         clock = pygame.time.Clock()
         self.renderer = Renderer(tile_size, width, height)
@@ -87,6 +88,8 @@ class AtlasGame:
                     running = False
                 if event.type == pygame.KEYDOWN and event.key in (pygame.K_BACKQUOTE, pygame.K_F1):
                     self.console.active = not self.console.active
+                    if self.console.active:
+                        self.chat_active = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                     if self.console.active:
                         self.console.last_message = self.console.execute(self, self.console.buffer)
@@ -103,6 +106,9 @@ class AtlasGame:
                         self.chat_active = True
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
                     self.ai_paused = not self.ai_paused
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                    self.fullscreen = not self.fullscreen
+                    surface = self._create_display(width, height, tile_size)
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F5:
                     self.save()
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F9:
@@ -130,22 +136,25 @@ class AtlasGame:
                     obs, _ = self.env.reset()
 
             if self.renderer:
-                self.renderer.render(surface, self.env.world, self.env.mode.name, self.env.world.messages)
-                if self.console.active:
-                    font = self.renderer.font
-                    line = font.render("> " + self.console.buffer, True, (200, 200, 200))
-                    surface.blit(line, (4, self.config.world.height * tile_size + 70))
-                    if self.console.last_message:
-                        msg = font.render(self.console.last_message, True, (120, 200, 120))
-                        surface.blit(msg, (4, self.config.world.height * tile_size + 90))
-                if self.chat_active:
-                    font = self.renderer.font
-                    line = font.render("Chat: " + self.chat_buffer, True, (200, 200, 200))
-                    surface.blit(line, (4, self.config.world.height * tile_size + 50))
+                self.renderer.render(
+                    surface,
+                    self.env.world,
+                    self.env.mode.name,
+                    self.env.world.messages,
+                    chat_buffer=self.chat_buffer,
+                    chat_active=self.chat_active,
+                    console_active=self.console.active,
+                    console_buffer=self.console.buffer,
+                    console_message=self.console.last_message,
+                )
 
             pygame.display.flip()
             clock.tick(self.config.rendering.fps)
         pygame.quit()
+
+    def _create_display(self, width: int, height: int, tile_size: int) -> pygame.Surface:
+        flags = pygame.FULLSCREEN if self.fullscreen else 0
+        return pygame.display.set_mode((width * tile_size, height * tile_size + 140), flags)
 
 
 def train_headless(config_path: Path | None, steps: int) -> None:
