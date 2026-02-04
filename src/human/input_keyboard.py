@@ -13,15 +13,11 @@ class KeyboardController:
         if event.type != pygame.KEYDOWN:
             return
         human = self.world.human
-        if event.key in (pygame.K_w, pygame.K_UP):
-            move(self.world, human.entity_id, "N")
-        elif event.key in (pygame.K_s, pygame.K_DOWN):
-            move(self.world, human.entity_id, "S")
-        elif event.key in (pygame.K_a, pygame.K_LEFT):
+        if event.key in (pygame.K_a, pygame.K_LEFT):
             move(self.world, human.entity_id, "W")
         elif event.key in (pygame.K_d, pygame.K_RIGHT):
             move(self.world, human.entity_id, "E")
-        elif event.key == pygame.K_SPACE:
+        elif event.key in (pygame.K_SPACE, pygame.K_w, pygame.K_UP):
             jump(self.world, human.entity_id)
         elif event.key == pygame.K_b:
             dx = 1 if human.facing.value == "E" else -1

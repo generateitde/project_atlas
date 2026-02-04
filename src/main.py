@@ -85,14 +85,22 @@ class AtlasGame:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_BACKQUOTE:
+                if event.type == pygame.KEYDOWN and event.key in (pygame.K_BACKQUOTE, pygame.K_F1):
                     self.console.active = not self.console.active
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                     if self.console.active:
                         self.console.last_message = self.console.execute(self, self.console.buffer)
                         self.console.buffer = ""
+                    elif self.chat_active:
+                        message = self.chat_buffer.strip()
+                        if message:
+                            self.env.world.messages.append(("Human", message))
+                            if self.env.world.pending_question:
+                                self.env.world.pending_question = False
+                        self.chat_buffer = ""
+                        self.chat_active = False
                     else:
-                        self.chat_active = not self.chat_active
+                        self.chat_active = True
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
                     self.ai_paused = not self.ai_paused
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F5:
@@ -113,7 +121,7 @@ class AtlasGame:
                     else:
                         self.keyboard.handle_event(event)
 
-            if not self.ai_paused:
+            if not self.ai_paused and not self.env.world.pending_question:
                 action, self.recurrent_state = self.trainer.predict(obs, state=self.recurrent_state, mask=self.episode_start)
                 obs, reward, done, _, info = self.env.step(int(action))
                 self.db.log_step(obs, int(action), float(reward), bool(done), info)
