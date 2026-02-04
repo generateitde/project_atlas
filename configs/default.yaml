@@ -7,9 +7,16 @@ toggles:
 rendering:
   tile_size: 32
   fps: 30
+  fullscreen: false
 timing:
   env_step_hz: 30
   agent_step_hz: 5
+controls:
+  move_left: ["a", "left"]
+  move_right: ["d", "right"]
+  jump: ["space", "w", "up"]
+  break_tile: ["b"]
+  inspect: ["i"]
 training:
   algo: "recurrent_ppo"
   n_envs: 4

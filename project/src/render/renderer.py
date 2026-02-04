@@ -19,12 +19,13 @@ class Renderer:
         self.font = pygame.font.SysFont("arial", 14)
 
     def draw(self, screen: pygame.Surface, world: WorldState) -> None:
-        screen.fill((10, 10, 20))
+        screen.fill((60, 90, 140))
         # TODO: Add animation frames and sprite swaps for movement/combat.
         for y, row in enumerate(world.tiles):
             for x, tile in enumerate(row):
                 rect = pygame.Rect(x * self.tile_size, y * self.tile_size, self.tile_size, self.tile_size)
-                draw_tile(screen, tile, rect)
+                grass_top = y == 0 or world.tiles[y - 1][x] == TileType.EMPTY
+                draw_tile(screen, tile, rect, grass_top=grass_top)
         self._draw_character(screen, world.human, (50, 180, 220))
         self._draw_character(screen, world.atlas, (220, 120, 50))
         for item in world.items.values():
@@ -36,19 +37,23 @@ class Renderer:
         self.overlay.draw(screen, self.font)
 
     def _draw_character(self, screen: pygame.Surface, character: Character, color) -> None:
+        char_height = int(self.tile_size * 1.7)
+        char_width = int(self.tile_size * 0.9)
         rect = pygame.Rect(
-            character.pos[0] * self.tile_size,
-            character.pos[1] * self.tile_size,
-            self.tile_size,
-            self.tile_size,
+            int(character.pos[0] * self.tile_size + (self.tile_size - char_width) / 2),
+            int((character.pos[1] + 1) * self.tile_size - char_height),
+            char_width,
+            char_height,
         )
         pygame.draw.rect(screen, color, rect)
+        pygame.draw.rect(screen, (20, 20, 20), rect, 2)
         if character.hand_item_id:
-            anchor = ANCHORS.get("atlas", {}).get(character.facing, {}).get("hand_r", (0, 0))
+            anchor = ANCHORS.get("atlas", {}).get(character.facing, {}).get("hand_r", (0.5, 0.5))
+            item_size = max(4, int(self.tile_size * 0.3))
             item_rect = pygame.Rect(
-                rect.x + anchor[0],
-                rect.y + anchor[1],
-                self.tile_size // 3,
-                self.tile_size // 3,
+                rect.x + int(anchor[0] * rect.width) - item_size // 2,
+                rect.y + int(anchor[1] * rect.height) - item_size // 2,
+                item_size,
+                item_size,
             )
             pygame.draw.rect(screen, (250, 250, 250), item_rect)

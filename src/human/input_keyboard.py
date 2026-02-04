@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pygame
 
+from src.config import ControlsConfig
 from src.env.tools import break_tile, inspect, jump, move
 
 

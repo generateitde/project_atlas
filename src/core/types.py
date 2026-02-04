@@ -74,12 +74,13 @@ class Character:
     atk: int = 1
     defense: int = 0
     speed: float = 1.0
-    jump_power: float = 4.0
+    jump_power: float = 2.0
     can_fly: bool = False
     fly_timer: int = 0
     level: int = 1
     exp: int = 0
     transform_state: Optional[str] = None
+    jump_remaining: int = 0
 
 
 @dataclass
