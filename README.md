@@ -40,6 +40,7 @@ python -m src.main run
 - **Toggle console:** press <kbd>`</kbd> (backquote) to open/close the console input.
 - **Chat input:** press <kbd>Enter</kbd> to open/close chat input. In *query mode* this is how you answer Atlas; pressing Enter again submits the response.
 - **Pause AI:** press <kbd>Tab</kbd> to pause/resume the AI.
+- **Fullscreen:** press <kbd>F11</kbd> to toggle fullscreen.
 - **Click-to-inspect:** while the console is open, left-click a tile to show its info (tile type + actors) in the console output line.
 
 ## AI Modes & Chat Flow

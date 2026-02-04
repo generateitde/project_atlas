@@ -70,36 +70,6 @@ class World:
         return f"Tile ({x}, {y}): {tile.value}.{actor_text}"
 
 
-def _is_blocking(world: World, pos: tuple[int, int], direction: int) -> bool:
-    if not world.in_bounds(pos):
-        return True
-    props = TILE_PROPS[world.tiles[pos[1], pos[0]]]
-    if props.solid:
-        return True
-    if direction > 0 and props.one_way_platform:
-        return True
-    return False
-
-
-def _apply_vertical_motion(world: World, actor: Character) -> None:
-    if actor.can_fly:
-        return
-    x = int(actor.pos.x)
-    y = int(actor.pos.y)
-    if actor.jump_remaining > 0:
-        target = (x, y - 1)
-        if _is_blocking(world, target, direction=-1):
-            actor.jump_remaining = 0
-            return
-        actor.pos.y -= 1
-        actor.jump_remaining -= 1
-        return
-    below = (x, y + 1)
-    if _is_blocking(world, below, direction=1):
-        return
-    actor.pos.y += 1
-
-
 class GridEnv(gym.Env):
     metadata = {"render_modes": ["human"], "render_fps": 30}
 

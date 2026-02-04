@@ -70,12 +70,4 @@ class Renderer:
             )
             chat_y += line_offset
 
-        input_y = chat_y + min(len(messages[-3:]), 3) * 18 + 6
-        if console_active:
-            self.ui.draw_text(surface, "> " + console_buffer, (4, input_y))
-            if console_message:
-                self.ui.draw_text(surface, console_message, (4, input_y + 18))
-        elif chat_active:
-            self.ui.draw_text(surface, "Chat: " + chat_buffer, (4, input_y))
-
         # TODO: Add animations for movement and combat.

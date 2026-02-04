@@ -32,6 +32,7 @@ class AtlasGame:
         self.steps_since_question = 0
         self.question_interval = 120
         self.goal_text = ""
+        self.fullscreen = False
         self.renderer = None
         self.keyboard = KeyboardController(self.env.world, self.config.controls)
         self.trainer = AtlasTrainer(self.config, Path("checkpoints"))
@@ -123,6 +124,9 @@ class AtlasGame:
                     self.save()
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F9:
                     self.load()
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                    self.fullscreen = not self.fullscreen
+                    surface = self._create_display(width, height, tile_size)
                 elif event.type == pygame.KEYDOWN:
                     if self.console.active:
                         if event.key == pygame.K_BACKSPACE:
@@ -190,7 +194,7 @@ class AtlasGame:
 
     def _create_display(self, width: int, height: int, tile_size: int) -> pygame.Surface:
         flags = pygame.FULLSCREEN if self.fullscreen else 0
-        return pygame.display.set_mode((width * tile_size, height * tile_size + 140), flags)
+        return pygame.display.set_mode((width * tile_size, height * tile_size + 120), flags)
 
 
 def train_headless(config_path: Path | None, steps: int) -> None:
