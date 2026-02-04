@@ -18,6 +18,11 @@ from src.env.tools import break_tile, inspect, jump, move, speak
 from src.env.world_gen import default_spawn, generate_world
 
 
+def _apply_vertical_motion(world: World, actor: Character) -> None:
+    apply_gravity(actor, can_stand=world.is_passable((int(actor.pos.x), int(actor.pos.y + 1))))
+    actor.pos.y += actor.vel.y * 0.1
+
+
 @dataclass
 class World:
     tiles: np.ndarray
@@ -35,9 +40,13 @@ class World:
 
     def tile_at(self, pos: Vec2) -> TileType:
         x, y = int(pos.x), int(pos.y)
+        if not self.in_bounds((x, y)):
+            return TileType.WALL
         return self.tiles[y, x]
 
     def is_passable(self, pos: tuple[int, int]) -> bool:
+        if not self.in_bounds(pos):
+            return False
         tile = self.tiles[pos[1], pos[0]]
         return tile in {TileType.EMPTY, TileType.GOAL, TileType.FLAG, TileType.DOOR_OPEN, TileType.PLATFORM, TileType.LADDER}
 
@@ -45,6 +54,19 @@ class World:
         if actor_id == self.atlas.entity_id:
             return self.atlas
         return self.human
+
+    def describe_at(self, pos: tuple[int, int]) -> str:
+        x, y = pos
+        if not self.in_bounds(pos):
+            return f"({x}, {y}) is outside the world bounds."
+        tile = self.tiles[y, x]
+        actors = []
+        if (int(self.atlas.pos.x), int(self.atlas.pos.y)) == (x, y):
+            actors.append(f"Atlas (HP {self.atlas.hp}, Lvl {self.atlas.level})")
+        if (int(self.human.pos.x), int(self.human.pos.y)) == (x, y):
+            actors.append("Human")
+        actor_text = f" Actors: {', '.join(actors)}." if actors else ""
+        return f"Tile ({x}, {y}): {tile.value}.{actor_text}"
 
 
 class GridEnv(gym.Env):
@@ -116,8 +138,7 @@ class GridEnv(gym.Env):
         elif action == 13:
             speak(self.world, "Atlas (Frage): Was soll ich als Nächstes tun?")
 
-        apply_gravity(atlas, can_stand=self.world.is_passable((int(atlas.pos.x), int(atlas.pos.y + 1))))
-        atlas.pos.y += atlas.vel.y * 0.1
+        _apply_vertical_motion(self.world, atlas)
 
         mode_reward, mode_events, done, info = self.mode.step(self.world, events, self.rng)
         reward = compute_reward(mode_reward, events + mode_events)
