@@ -13,12 +13,13 @@ from src.core.types import TILE_PROPS, Character, Facing, TileType, Vec2
 from src.env import encoding
 from src.env.modes import Mode, create_mode
 from src.env.rewards import compute_reward
-from src.env.tools import ask_human, break_tile, inspect, jump, move, speak
+from src.env import rules
+from src.env.tools import break_tile, inspect, jump, move, speak
 from src.env.world_gen import default_spawn, generate_world
 
 
 def _apply_vertical_motion(world: World, actor: Character) -> None:
-    apply_gravity(actor, can_stand=world.is_passable((int(actor.pos.x), int(actor.pos.y + 1))))
+    rules.apply_gravity(actor, can_stand=world.is_passable((int(actor.pos.x), int(actor.pos.y + 1))))
     actor.pos.y += actor.vel.y * 0.1
 
 
