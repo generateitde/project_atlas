@@ -9,12 +9,11 @@ import numpy as np
 from src.config import AtlasConfig
 from src.core.events import Event
 from src.core.rng import RNG
-from src.core.types import Character, Facing, TileType, Vec2
+from src.core.types import TILE_PROPS, Character, Facing, TileType, Vec2
 from src.env import encoding
 from src.env.modes import Mode, create_mode
 from src.env.rewards import compute_reward
-from src.env.rules import apply_gravity
-from src.env.tools import break_tile, inspect, jump, move, speak
+from src.env.tools import ask_human, break_tile, inspect, jump, move, speak
 from src.env.world_gen import default_spawn, generate_world
 
 
@@ -33,6 +32,7 @@ class World:
     messages: list[tuple[str, str]] = field(default_factory=list)
     atlas_has_flag: bool = False
     hand_item: Any | None = None
+    pending_question: bool = False
 
     def in_bounds(self, pos: tuple[int, int]) -> bool:
         x, y = pos
@@ -49,6 +49,12 @@ class World:
             return False
         tile = self.tiles[pos[1], pos[0]]
         return tile in {TileType.EMPTY, TileType.GOAL, TileType.FLAG, TileType.DOOR_OPEN, TileType.PLATFORM, TileType.LADDER}
+
+    def can_stand_on(self, pos: tuple[int, int]) -> bool:
+        if not self.in_bounds(pos):
+            return False
+        props = TILE_PROPS[self.tiles[pos[1], pos[0]]]
+        return props.solid or props.one_way_platform
 
     def get_actor(self, actor_id: str) -> Character:
         if actor_id == self.atlas.entity_id:
@@ -105,7 +111,8 @@ class GridEnv(gym.Env):
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
         if seed is not None:
-            self.rng = RNG(seed)
+            self.seed_value = seed
+        self.rng = RNG(self.seed_value)
         self.world = self._build_world()
         self._steps = 0
         self.mode.reset(self.world, self.rng)
@@ -117,12 +124,8 @@ class GridEnv(gym.Env):
     def step(self, action: int):
         events: list[Event] = []
         atlas = self.world.atlas
-        if action == 1:
-            move(self.world, atlas.entity_id, "N")
-        elif action == 2:
+        if action == 2:
             move(self.world, atlas.entity_id, "E")
-        elif action == 3:
-            move(self.world, atlas.entity_id, "S")
         elif action == 4:
             move(self.world, atlas.entity_id, "W")
         elif action == 5:
@@ -136,7 +139,7 @@ class GridEnv(gym.Env):
         elif action == 12:
             speak(self.world, "Atlas (Plan): Weiter erkunden.")
         elif action == 13:
-            speak(self.world, "Atlas (Frage): Was soll ich als Nächstes tun?")
+            ask_human(self.world, "Was soll ich als Nächstes tun?")
 
         _apply_vertical_motion(self.world, atlas)
 

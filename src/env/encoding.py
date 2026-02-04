@@ -29,6 +29,8 @@ def action_mask_for(world, actor) -> np.ndarray:
     if actor is None:
         return mask
     # minimal masking: always allow move/jump, gate others if no item
+    mask[1] = False
+    mask[3] = False
     has_item = world.hand_item is not None
     if not has_item:
         mask[7] = False
