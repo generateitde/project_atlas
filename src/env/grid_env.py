@@ -35,6 +35,8 @@ class World:
 
     def tile_at(self, pos: Vec2) -> TileType:
         x, y = int(pos.x), int(pos.y)
+        if not self.in_bounds((x, y)):
+            return TileType.WALL
         return self.tiles[y, x]
 
     def is_passable(self, pos: tuple[int, int]) -> bool:
