@@ -33,7 +33,7 @@ class AtlasGame:
         self.question_interval = 120
         self.goal_text = ""
         self.renderer = None
-        self.keyboard = KeyboardController(self.env.world)
+        self.keyboard = KeyboardController(self.env.world, self.config.controls)
         self.trainer = AtlasTrainer(self.config, Path("checkpoints"))
         self.trainer.load(self.env)
         self.db = DBLogger(Path("atlas.db"))
@@ -79,7 +79,7 @@ class AtlasGame:
         tile_size = self.config.rendering.tile_size
         width = self.config.world.width
         height = self.config.world.height
-        surface = pygame.display.set_mode((width * tile_size, height * tile_size + 120))
+        surface = self._create_display(width, height, tile_size)
         pygame.display.set_caption("Atlas RL Grid")
         clock = pygame.time.Clock()
         self.renderer = Renderer(tile_size, width, height)
@@ -90,12 +90,22 @@ class AtlasGame:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_BACKQUOTE:
+                if event.type == pygame.KEYDOWN and event.key in (pygame.K_BACKQUOTE, pygame.K_F1):
                     self.console.active = not self.console.active
+                    if self.console.active:
+                        self.chat_active = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                     if self.console.active:
                         self.console.last_message = self.console.execute(self, self.console.buffer)
                         self.console.buffer = ""
+                    elif self.chat_active:
+                        message = self.chat_buffer.strip()
+                        if message:
+                            self.env.world.messages.append(("Human", message))
+                            if self.env.world.pending_question:
+                                self.env.world.pending_question = False
+                        self.chat_buffer = ""
+                        self.chat_active = False
                     else:
                         self.chat_active = not self.chat_active
                         if not self.chat_active and self.waiting_for_response:
@@ -106,6 +116,9 @@ class AtlasGame:
                             self.waiting_for_response = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
                     self.ai_paused = not self.ai_paused
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                    self.fullscreen = not self.fullscreen
+                    surface = self._create_display(width, height, tile_size)
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F5:
                     self.save()
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F9:
@@ -174,6 +187,10 @@ class AtlasGame:
             pygame.display.flip()
             clock.tick(self.config.rendering.fps)
         pygame.quit()
+
+    def _create_display(self, width: int, height: int, tile_size: int) -> pygame.Surface:
+        flags = pygame.FULLSCREEN if self.fullscreen else 0
+        return pygame.display.set_mode((width * tile_size, height * tile_size + 140), flags)
 
 
 def train_headless(config_path: Path | None, steps: int) -> None:
