@@ -28,7 +28,12 @@ class Renderer:
         hud_y = self.height * self.tile_size + 4
         self.ui.draw_text(surface, f"Mode: {mode_name}", (4, hud_y))
         self.ui.draw_text(surface, f"Atlas HP: {atlas.hp} Lvl: {atlas.level} EXP: {atlas.exp}", (4, hud_y + 18))
-        chat_y = hud_y + 40
+        controls_y = hud_y + 36
+        self.ui.draw_text(surface, "Console: ` oder F1 | Chat: Enter", (4, controls_y))
+        chat_y = controls_y + 18
+        if world.pending_question:
+            self.ui.draw_text(surface, "Atlas wartet auf Antwort (Enter zum Chat).", (4, chat_y))
+            chat_y += 18
         for idx, (speaker, msg) in enumerate(messages[-3:]):
             display = msg if msg.startswith("Atlas") else f"{speaker}: {msg}"
             self.ui.draw_text(surface, display, (4, chat_y + idx * 18))
