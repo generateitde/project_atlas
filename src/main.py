@@ -27,6 +27,12 @@ class AtlasGame:
         self.chat_active = False
         self.chat_buffer = ""
         self.ai_paused = False
+        self.ai_mode = "explore"
+        self.waiting_for_response = False
+        self.steps_since_question = 0
+        self.question_interval = 120
+        self.goal_text = ""
+        self.fullscreen = False
         self.renderer = None
         self.keyboard = KeyboardController(self.env.world)
         self.trainer = AtlasTrainer(self.config, Path("checkpoints"))
@@ -74,7 +80,7 @@ class AtlasGame:
         tile_size = self.config.rendering.tile_size
         width = self.config.world.width
         height = self.config.world.height
-        surface = pygame.display.set_mode((width * tile_size, height * tile_size + 120))
+        surface = self._create_display(width, height, tile_size)
         pygame.display.set_caption("Atlas RL Grid")
         clock = pygame.time.Clock()
         self.renderer = Renderer(tile_size, width, height)
@@ -93,12 +99,21 @@ class AtlasGame:
                         self.console.buffer = ""
                     else:
                         self.chat_active = not self.chat_active
+                        if not self.chat_active and self.waiting_for_response:
+                            response = self.chat_buffer.strip()
+                            if response:
+                                self.env.world.messages.append(("Human", response))
+                            self.chat_buffer = ""
+                            self.waiting_for_response = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
                     self.ai_paused = not self.ai_paused
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F5:
                     self.save()
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F9:
                     self.load()
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                    self.fullscreen = not self.fullscreen
+                    surface = self._create_display(width, height, tile_size)
                 elif event.type == pygame.KEYDOWN:
                     if self.console.active:
                         if event.key == pygame.K_BACKSPACE:
@@ -112,32 +127,61 @@ class AtlasGame:
                             self.chat_buffer += event.unicode
                     else:
                         self.keyboard.handle_event(event)
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if self.console.active:
+                        mouse_x, mouse_y = event.pos
+                        grid_width = width * tile_size
+                        grid_height = height * tile_size
+                        if mouse_x < grid_width and mouse_y < grid_height:
+                            grid_x = mouse_x // tile_size
+                            grid_y = mouse_y // tile_size
+                            self.console.last_message = self.env.world.describe_at((grid_x, grid_y))
 
-            if not self.ai_paused:
+            if self.ai_mode == "query" and not self.waiting_for_response:
+                self.steps_since_question += 1
+                if self.steps_since_question >= self.question_interval:
+                    self.env.world.messages.append(("Atlas (Frage)", "Was soll ich als Nächstes tun?"))
+                    self.waiting_for_response = True
+                    self.steps_since_question = 0
+
+            if not self.ai_paused and not self.waiting_for_response:
                 action, self.recurrent_state = self.trainer.predict(obs, state=self.recurrent_state, mask=self.episode_start)
                 obs, reward, done, _, info = self.env.step(int(action))
                 self.db.log_step(obs, int(action), float(reward), bool(done), info)
                 self.episode_start = done
                 if done:
                     obs, _ = self.env.reset()
+                    self.keyboard.world = self.env.world
 
             if self.renderer:
-                self.renderer.render(surface, self.env.world, self.env.mode.name, self.env.world.messages)
+                self.renderer.render(
+                    surface,
+                    self.env.world,
+                    self.env.mode.name,
+                    self.env.world.messages,
+                    goal_text=self.goal_text,
+                    ai_mode=self.ai_mode,
+                    waiting_for_response=self.waiting_for_response,
+                )
+                font = self.renderer.font
+                ui = self.renderer.ui
+                max_text_width = surface.get_width() - 8
                 if self.console.active:
-                    font = self.renderer.font
-                    line = font.render("> " + self.console.buffer, True, (200, 200, 200))
-                    surface.blit(line, (4, self.config.world.height * tile_size + 70))
+                    input_y = self.config.world.height * tile_size + 70
+                    ui.draw_wrapped_text(surface, "> " + self.console.buffer, (4, input_y), max_text_width, (200, 200, 200))
                     if self.console.last_message:
-                        msg = font.render(self.console.last_message, True, (120, 200, 120))
-                        surface.blit(msg, (4, self.config.world.height * tile_size + 90))
+                        output_y = input_y + font.get_linesize() * 2
+                        ui.draw_wrapped_text(surface, self.console.last_message, (4, output_y), max_text_width, (120, 200, 120))
                 if self.chat_active:
-                    font = self.renderer.font
-                    line = font.render("Chat: " + self.chat_buffer, True, (200, 200, 200))
-                    surface.blit(line, (4, self.config.world.height * tile_size + 50))
+                    ui.draw_wrapped_text(surface, "Chat: " + self.chat_buffer, (4, self.config.world.height * tile_size + 50), max_text_width, (200, 200, 200))
 
             pygame.display.flip()
             clock.tick(self.config.rendering.fps)
         pygame.quit()
+
+    def _create_display(self, width: int, height: int, tile_size: int) -> pygame.Surface:
+        flags = pygame.FULLSCREEN if self.fullscreen else 0
+        return pygame.display.set_mode((width * tile_size, height * tile_size + 120), flags)
 
 
 def train_headless(config_path: Path | None, steps: int) -> None:

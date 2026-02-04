@@ -14,8 +14,18 @@ class Renderer:
         self.font = pygame.font.SysFont("Consolas", 16)
         self.ui = UIOverlays(self.font)
 
-    def render(self, surface: pygame.Surface, world, mode_name: str, messages: list[tuple[str, str]]) -> None:
+    def render(
+        self,
+        surface: pygame.Surface,
+        world,
+        mode_name: str,
+        messages: list[tuple[str, str]],
+        goal_text: str = "",
+        ai_mode: str = "explore",
+        waiting_for_response: bool = False,
+    ) -> None:
         surface.fill((10, 10, 20))
+        max_text_width = surface.get_width() - 8
         for y in range(world.tiles.shape[0]):
             for x in range(world.tiles.shape[1]):
                 tile = world.tiles[y, x]
@@ -26,11 +36,38 @@ class Renderer:
         self.sprite_db.draw_character(surface, (200, 200, 50), int(human.pos.x) * self.tile_size, int(human.pos.y) * self.tile_size)
 
         hud_y = self.height * self.tile_size + 4
-        self.ui.draw_text(surface, f"Mode: {mode_name}", (4, hud_y))
-        self.ui.draw_text(surface, f"Atlas HP: {atlas.hp} Lvl: {atlas.level} EXP: {atlas.exp}", (4, hud_y + 18))
-        chat_y = hud_y + 40
+        offset = self.ui.draw_wrapped_text(surface, f"Mode: {mode_name}", (4, hud_y), max_text_width)
+        offset += self.ui.draw_wrapped_text(
+            surface,
+            f"Atlas HP: {atlas.hp} Lvl: {atlas.level} EXP: {atlas.exp}",
+            (4, hud_y + offset),
+            max_text_width,
+        )
+        if goal_text:
+            offset += self.ui.draw_wrapped_text(
+                surface,
+                f"Goal: {goal_text}",
+                (4, hud_y + offset),
+                max_text_width,
+                (180, 200, 120),
+            )
+        mode_label = "AI Mode: Query (waiting)" if ai_mode == "query" and waiting_for_response else f"AI Mode: {ai_mode.title()}"
+        offset += self.ui.draw_wrapped_text(
+            surface,
+            mode_label,
+            (4, hud_y + offset),
+            max_text_width,
+            (160, 160, 220),
+        )
+        chat_y = hud_y + offset + 4
         for idx, (speaker, msg) in enumerate(messages[-3:]):
             display = msg if msg.startswith("Atlas") else f"{speaker}: {msg}"
-            self.ui.draw_text(surface, display, (4, chat_y + idx * 18))
+            line_offset = self.ui.draw_wrapped_text(
+                surface,
+                display,
+                (4, chat_y),
+                max_text_width,
+            )
+            chat_y += line_offset
 
         # TODO: Add animations for movement and combat.
