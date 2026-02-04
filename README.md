@@ -11,10 +11,22 @@ Atlas is a 2D pixel grid RL laboratory featuring a human player and an RL agent 
 - Runs without sprite assets (fallback rectangles).
 
 ## Install
+
+### Conda (recommended)
+```bash
+conda create -n atlas python=3.11
+conda activate atlas
+pip install -U pip
+pip install -r requirements.txt
+pip install -e .
+```
+
+### Virtualenv
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -U pip
+pip install -r requirements.txt
 pip install -e .
 ```
 
