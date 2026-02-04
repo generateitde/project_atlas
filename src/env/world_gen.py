@@ -16,7 +16,8 @@ class WorldPreset:
 
 
 def _blank(width: int, height: int, rng: RNG) -> np.ndarray:
-    tiles = np.full((height, width), TileType.EMPTY, dtype=object)
+    tiles = np.empty((height, width), dtype=object)
+    tiles[:] = TileType.EMPTY
     tiles[0, :] = TileType.WALL
     tiles[-1, :] = TileType.WALL
     tiles[:, 0] = TileType.WALL
