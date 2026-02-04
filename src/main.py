@@ -27,7 +27,11 @@ class AtlasGame:
         self.chat_active = False
         self.chat_buffer = ""
         self.ai_paused = False
-        self.fullscreen = self.config.rendering.fullscreen
+        self.ai_mode = "explore"
+        self.waiting_for_response = False
+        self.steps_since_question = 0
+        self.question_interval = 120
+        self.goal_text = ""
         self.renderer = None
         self.keyboard = KeyboardController(self.env.world, self.config.controls)
         self.trainer = AtlasTrainer(self.config, Path("checkpoints"))
@@ -103,7 +107,13 @@ class AtlasGame:
                         self.chat_buffer = ""
                         self.chat_active = False
                     else:
-                        self.chat_active = True
+                        self.chat_active = not self.chat_active
+                        if not self.chat_active and self.waiting_for_response:
+                            response = self.chat_buffer.strip()
+                            if response:
+                                self.env.world.messages.append(("Human", response))
+                            self.chat_buffer = ""
+                            self.waiting_for_response = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
                     self.ai_paused = not self.ai_paused
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
@@ -126,14 +136,31 @@ class AtlasGame:
                             self.chat_buffer += event.unicode
                     else:
                         self.keyboard.handle_event(event)
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if self.console.active:
+                        mouse_x, mouse_y = event.pos
+                        grid_width = width * tile_size
+                        grid_height = height * tile_size
+                        if mouse_x < grid_width and mouse_y < grid_height:
+                            grid_x = mouse_x // tile_size
+                            grid_y = mouse_y // tile_size
+                            self.console.last_message = self.env.world.describe_at((grid_x, grid_y))
 
-            if not self.ai_paused and not self.env.world.pending_question:
+            if self.ai_mode == "query" and not self.waiting_for_response:
+                self.steps_since_question += 1
+                if self.steps_since_question >= self.question_interval:
+                    self.env.world.messages.append(("Atlas (Frage)", "Was soll ich als Nächstes tun?"))
+                    self.waiting_for_response = True
+                    self.steps_since_question = 0
+
+            if not self.ai_paused and not self.waiting_for_response:
                 action, self.recurrent_state = self.trainer.predict(obs, state=self.recurrent_state, mask=self.episode_start)
                 obs, reward, done, _, info = self.env.step(int(action))
                 self.db.log_step(obs, int(action), float(reward), bool(done), info)
                 self.episode_start = done
                 if done:
                     obs, _ = self.env.reset()
+                    self.keyboard.world = self.env.world
 
             if self.renderer:
                 self.renderer.render(
@@ -141,12 +168,21 @@ class AtlasGame:
                     self.env.world,
                     self.env.mode.name,
                     self.env.world.messages,
-                    chat_buffer=self.chat_buffer,
-                    chat_active=self.chat_active,
-                    console_active=self.console.active,
-                    console_buffer=self.console.buffer,
-                    console_message=self.console.last_message,
+                    goal_text=self.goal_text,
+                    ai_mode=self.ai_mode,
+                    waiting_for_response=self.waiting_for_response,
                 )
+                font = self.renderer.font
+                ui = self.renderer.ui
+                max_text_width = surface.get_width() - 8
+                if self.console.active:
+                    input_y = self.config.world.height * tile_size + 70
+                    ui.draw_wrapped_text(surface, "> " + self.console.buffer, (4, input_y), max_text_width, (200, 200, 200))
+                    if self.console.last_message:
+                        output_y = input_y + font.get_linesize() * 2
+                        ui.draw_wrapped_text(surface, self.console.last_message, (4, output_y), max_text_width, (120, 200, 120))
+                if self.chat_active:
+                    ui.draw_wrapped_text(surface, "Chat: " + self.chat_buffer, (4, self.config.world.height * tile_size + 50), max_text_width, (200, 200, 200))
 
             pygame.display.flip()
             clock.tick(self.config.rendering.fps)

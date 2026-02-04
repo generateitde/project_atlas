@@ -56,6 +56,19 @@ class World:
             return self.atlas
         return self.human
 
+    def describe_at(self, pos: tuple[int, int]) -> str:
+        x, y = pos
+        if not self.in_bounds(pos):
+            return f"({x}, {y}) is outside the world bounds."
+        tile = self.tiles[y, x]
+        actors = []
+        if (int(self.atlas.pos.x), int(self.atlas.pos.y)) == (x, y):
+            actors.append(f"Atlas (HP {self.atlas.hp}, Lvl {self.atlas.level})")
+        if (int(self.human.pos.x), int(self.human.pos.y)) == (x, y):
+            actors.append("Human")
+        actor_text = f" Actors: {', '.join(actors)}." if actors else ""
+        return f"Tile ({x}, {y}): {tile.value}.{actor_text}"
+
 
 def _is_blocking(world: World, pos: tuple[int, int], direction: int) -> bool:
     if not world.in_bounds(pos):
