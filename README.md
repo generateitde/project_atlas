@@ -87,6 +87,14 @@ python -m src.main export --db atlas.db --out replay.jsonl
 - API keys are loaded only from `.env` (see `.env.example`).
 - Animation support is left as TODOs for future work.
 
+## Pixel Art Resolution Guidelines
+- **Base resolution:** Prefer a low internal canvas such as `320x180` (16:9), `320x240` (4:3), or `640x360`. This keeps visuals crisp and avoids over-detailed art that breaks pixel style.
+- **Character/sprite size:** Use `32x32` as a default size for player characters. Use `16x16` for tiny/retro units and `64x64` for larger, more detailed characters.
+- **Upscaling:** Scale with integer factors only (`2x`, `3x`, `4x`, ...). Example: `320x180 -> 1920x1080` at `6x` preserves pixel sharpness.
+- **Aspect ratio:** Use `16:9` as the default for modern displays.
+- **Consistency:** Keep one pixel density across world tiles, sprites, and UI so elements feel cohesive.
+- **Beginner setup recommendation:** Start with `320x180` game resolution and `32x32` character sprites.
+
 =====================================================================
 TODO / Roadmap
 =====================================================================
