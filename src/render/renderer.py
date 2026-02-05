@@ -13,6 +13,7 @@ class Renderer:
         self.sprite_db = SpriteDB(tile_size)
         self.font = pygame.font.SysFont("Consolas", 16)
         self.ui = UIOverlays(self.font)
+        self.last_chat_bottom = 0
 
     def render(
         self,
@@ -69,5 +70,6 @@ class Renderer:
                 max_text_width,
             )
             chat_y += line_offset
+        self.last_chat_bottom = chat_y
 
         # TODO: Add animations for movement and combat.

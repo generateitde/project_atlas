@@ -19,7 +19,15 @@ from src.env.world_gen import default_spawn, generate_world
 
 
 def _apply_vertical_motion(world: World, actor: Character) -> None:
-    rules.apply_gravity(actor, can_stand=world.is_passable((int(actor.pos.x), int(actor.pos.y + 1))))
+    if actor.jump_remaining > 0:
+        next_y = actor.pos.y - 1
+        target = (int(actor.pos.x), int(next_y))
+        if world.is_passable(target):
+            actor.pos.y = next_y
+            actor.jump_remaining -= 1
+            return
+        actor.jump_remaining = 0
+    rules.apply_gravity(actor, can_stand=world.can_stand_on((int(actor.pos.x), int(actor.pos.y + 1))))
     actor.pos.y += actor.vel.y * 0.1
 
 
@@ -143,6 +151,7 @@ class GridEnv(gym.Env):
             ask_human(self.world, "Was soll ich als Nächstes tun?")
 
         _apply_vertical_motion(self.world, atlas)
+        _apply_vertical_motion(self.world, self.world.human)
 
         mode_reward, mode_events, done, info = self.mode.step(self.world, events, self.rng)
         reward = compute_reward(mode_reward, events + mode_events)

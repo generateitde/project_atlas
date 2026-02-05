@@ -179,14 +179,16 @@ class AtlasGame:
                 font = self.renderer.font
                 ui = self.renderer.ui
                 max_text_width = surface.get_width() - 8
+                chat_bottom = self.renderer.last_chat_bottom
                 if self.console.active:
-                    input_y = self.config.world.height * tile_size + 70
+                    input_y = max(chat_bottom + 6, self.config.world.height * tile_size + 70)
                     ui.draw_wrapped_text(surface, "> " + self.console.buffer, (4, input_y), max_text_width, (200, 200, 200))
                     if self.console.last_message:
                         output_y = input_y + font.get_linesize() * 2
                         ui.draw_wrapped_text(surface, self.console.last_message, (4, output_y), max_text_width, (120, 200, 120))
                 if self.chat_active:
-                    ui.draw_wrapped_text(surface, "Chat: " + self.chat_buffer, (4, self.config.world.height * tile_size + 50), max_text_width, (200, 200, 200))
+                    input_y = max(chat_bottom + 6, self.config.world.height * tile_size + 50)
+                    ui.draw_wrapped_text(surface, "Chat: " + self.chat_buffer, (4, input_y), max_text_width, (200, 200, 200))
 
             pygame.display.flip()
             clock.tick(self.config.rendering.fps)
