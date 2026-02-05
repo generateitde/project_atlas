@@ -91,7 +91,7 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T4.2 Stuck Detector + Uncertainty Gate für ask_human
+NEXT TASK: T5.1 EXP/Level Persistenz + Gates
 
 ### Next Items
 - [x] T1.1 Reward Breakdown + Debug Overlay
@@ -103,7 +103,7 @@ NEXT TASK: T4.2 Stuck Detector + Uncertainty Gate für ask_human
 - [x] T3.3 CaptureTheFlag Vollständig
 - [x] T3.4 HideAndSeek Vollständig
 - [x] T4.1 Goal Stack + Subgoals
-- [ ] T4.2 Stuck Detector + Uncertainty Gate für ask_human
+- [x] T4.2 Stuck Detector + Uncertainty Gate für ask_human
 - [ ] T5.1 EXP/Level Persistenz + Gates
 - [ ] T5.2 Transformations
 - [ ] T5.3 Fly Items + Floating Islands
