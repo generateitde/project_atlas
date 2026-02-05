@@ -15,7 +15,7 @@ class Console:
     last_message: str = ""
     help_text: str = field(
         default_factory=lambda: (
-            "help | world list | world switch <preset> <seed> | mode set <mode> <json_params> | "
+            "help | seed set <seed> | world list | world switch <preset> <seed> | mode set <mode> <json_params> | "
             "goal set <text> | ai mode <explore|query> | control <human|ai_atlas> | enemy spawn <type> <x> <y> <hp> <exp> | "
             "item spawn <type> <x> <y> | teleport <human|ai_atlas> <x> <y> | pause ai | resume ai | "
             "save | load | reset episode | print state | print map | agent info"
@@ -28,6 +28,10 @@ class Console:
             return ""
         if parts[0] == "help":
             return self.help_text
+        if parts[:2] == ["seed", "set"] and len(parts) >= 3:
+            seed = int(parts[2])
+            game.set_seed(seed)
+            return f"seed set to {seed}"
         if parts[:2] == ["world", "list"]:
             return ", ".join(PRESETS.keys())
         if parts[:2] == ["world", "switch"] and len(parts) >= 4:

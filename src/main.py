@@ -43,7 +43,13 @@ class AtlasGame:
         self.trainer = AtlasTrainer(self.config, Path("checkpoints"))
         self.trainer.load(self.env)
         self.db = DBLogger(Path("atlas.db"))
-        self.db.start_episode(self.env.preset, self.env.seed_value, self.env.mode.name, datetime.utcnow().isoformat())
+        self.db.start_episode(
+            self.env.preset,
+            self.env.seed_value,
+            self.env.mode.name,
+            datetime.utcnow().isoformat(),
+            self.env.world_hash,
+        )
         self.recurrent_state = None
         self.episode_start = True
 
@@ -55,6 +61,13 @@ class AtlasGame:
 
     def reset_episode(self) -> None:
         self.env.reset()
+        self.keyboard.world = self.env.world
+        self.episode_start = True
+
+    def set_seed(self, seed: int) -> None:
+        self.config.training.seed = seed
+        self.env.seed_value = seed
+        self.env.reset(seed=seed)
         self.keyboard.world = self.env.world
         self.episode_start = True
 

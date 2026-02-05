@@ -91,11 +91,11 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T1.2 Seed Repro & World Snapshot
+NEXT TASK: T2.1 Tool Contracts + Validation Layer
 
 ### Next Items
 - [x] T1.1 Reward Breakdown + Debug Overlay
-- [ ] T1.2 Seed Repro & World Snapshot
+- [x] T1.2 Seed Repro & World Snapshot
 - [ ] T2.1 Tool Contracts + Validation Layer
 - [ ] T2.2 Jump/Gravity State Machine + One-Way Platforms
 - [ ] T3.1 Mode Interface Refactor + Mode HUD
