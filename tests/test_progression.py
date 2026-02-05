@@ -70,3 +70,47 @@ def test_transform_reverts_stats_after_duration() -> None:
     assert actor.transform_timer == 0
     assert actor.transform_stats_backup is None
     assert (actor.atk, actor.defense, actor.speed, actor.jump_power) == original
+
+
+def test_fly_grant_temporary_expires() -> None:
+    actor = Character(entity_id="ai_atlas", display_name="Atlas", pos=Vec2(1, 1))
+
+    granted = rules.grant_fly(actor, duration_ticks=2)
+    assert granted["can_fly"] is True
+    assert granted["permanent"] is False
+    assert actor.can_fly is True
+    assert actor.fly_timer == 2
+
+    assert rules.tick_fly(actor) is False
+    assert actor.can_fly is True
+    assert actor.fly_timer == 1
+
+    assert rules.tick_fly(actor) is True
+    assert actor.can_fly is False
+    assert actor.fly_timer == 0
+
+
+def test_fly_grant_permanent_does_not_expire() -> None:
+    actor = Character(entity_id="ai_atlas", display_name="Atlas", pos=Vec2(1, 1))
+
+    granted = rules.grant_fly(actor, permanent=True)
+    assert granted["can_fly"] is True
+    assert granted["permanent"] is True
+    assert actor.fly_timer == 0
+
+    assert rules.tick_fly(actor) is False
+    assert actor.can_fly is True
+
+
+def test_apply_fly_item_supports_temp_and_perm_payloads() -> None:
+    actor = Character(entity_id="ai_atlas", display_name="Atlas", pos=Vec2(1, 1))
+
+    temp = rules.apply_fly_item(actor, {"duration_ticks": 3})
+    assert temp["can_fly"] is True
+    assert temp["permanent"] is False
+    assert actor.fly_timer == 3
+
+    perm = rules.apply_fly_item(actor, {"permanent": True})
+    assert perm["can_fly"] is True
+    assert perm["permanent"] is True
+    assert actor.fly_timer == 0

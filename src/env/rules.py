@@ -9,6 +9,7 @@ JUMP_COOLDOWN_TICKS = 6
 BASE_EXP_TO_LEVEL = 10
 EXP_LEVEL_SCALING = 5
 DEFAULT_TRANSFORM_DURATION = 120
+DEFAULT_FLY_DURATION = 120
 
 
 
@@ -136,3 +137,36 @@ def find_tiles(tiles, tile_type) -> list[tuple[int, int]]:
             if tiles[y, x] == tile_type:
                 positions.append((x, y))
     return positions
+
+
+def grant_fly(actor: Character, *, duration_ticks: int | None = None, permanent: bool = False) -> dict[str, int | bool]:
+    actor.can_fly = True
+    if permanent:
+        actor.fly_timer = 0
+    else:
+        duration = DEFAULT_FLY_DURATION if duration_ticks is None else max(1, int(duration_ticks))
+        actor.fly_timer = duration
+    return {
+        "can_fly": actor.can_fly,
+        "fly_timer": int(actor.fly_timer),
+        "permanent": actor.fly_timer == 0,
+    }
+
+
+def tick_fly(actor: Character) -> bool:
+    if not actor.can_fly:
+        return False
+    if actor.fly_timer <= 0:
+        return False
+    actor.fly_timer -= 1
+    if actor.fly_timer > 0:
+        return False
+    actor.can_fly = False
+    return True
+
+
+def apply_fly_item(actor: Character, fly_grant: dict | None) -> dict[str, int | bool]:
+    grant = fly_grant or {}
+    duration = grant.get("duration_ticks", grant.get("duration"))
+    permanent = bool(grant.get("permanent", False))
+    return grant_fly(actor, duration_ticks=duration, permanent=permanent)

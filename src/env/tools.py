@@ -43,10 +43,10 @@ def _adjacent_pos(world, actor_id: str) -> tuple[int, int]:
 
 
 def precheck_move(world, actor_id: str, direction: str) -> ToolResult:
-    if direction in {"N", "S"}:
-        return _result(False, error_code="blocked")
     dx, dy = _dir_to_delta(direction)
     actor = world.get_actor(actor_id)
+    if direction in {"N", "S"} and not actor.can_fly:
+        return _result(False, error_code="blocked")
     target = (int(actor.pos.x + dx), int(actor.pos.y + dy))
     if not world.in_bounds(target):
         return _result(False, error_code="out_of_bounds")

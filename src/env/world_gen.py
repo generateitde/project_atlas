@@ -28,11 +28,24 @@ def _blank(width: int, height: int, rng: RNG) -> np.ndarray:
 
 def floating_islands(width: int, height: int, rng: RNG) -> np.ndarray:
     tiles = _blank(width, height, rng)
-    for _ in range(6):
-        cx = rng.randint(2, width - 3)
-        cy = rng.randint(2, height - 4)
+    ground_y = height - 2
+
+    # Keep spawn corridor simple and guarantee no direct bridge to the goal.
+    for x in range(2, width - 2):
+        tiles[ground_y, x] = TileType.EMPTY
+
+    # Create elevated islands with larger vertical gaps than the baseline jump impulse.
+    top_band = max(2, height // 4)
+    for _ in range(8):
+        cx = rng.randint(3, width - 4)
+        cy = rng.randint(2, top_band)
         tiles[cy, cx - 1 : cx + 2] = TileType.PLATFORM
-    tiles[height - 2, width - 2] = TileType.GOAL
+
+    # Ensure there is always at least one high, isolated goal island.
+    goal_x = width - 3
+    goal_y = 2
+    tiles[goal_y, goal_x - 1 : goal_x + 1] = TileType.PLATFORM
+    tiles[goal_y - 1, goal_x] = TileType.GOAL
     return tiles
 
 
