@@ -55,9 +55,11 @@ class AtlasGame:
         self.last_uncertainty = 0.0
 
     def switch_world(self, preset: str, seed: int) -> None:
+        progression = self.trainer.snapshot_progression(self.env.world.atlas)
         self.env.preset = preset
         self.env.seed_value = seed
         self.env.reset(seed=seed)
+        self.trainer.restore_progression(self.env.world.atlas, progression)
         self.keyboard.world = self.env.world
 
     def reset_episode(self) -> None:
@@ -67,9 +69,11 @@ class AtlasGame:
         self.trainer.reset_dagger()
 
     def set_seed(self, seed: int) -> None:
+        progression = self.trainer.snapshot_progression(self.env.world.atlas)
         self.config.training.seed = seed
         self.env.seed_value = seed
         self.env.reset(seed=seed)
+        self.trainer.restore_progression(self.env.world.atlas, progression)
         self.keyboard.world = self.env.world
         self.episode_start = True
         self.trainer.reset_dagger()

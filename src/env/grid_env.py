@@ -82,7 +82,13 @@ class World:
         if not self.in_bounds(pos):
             return False
         tile = self.tiles[pos[1], pos[0]]
-        return tile in {TileType.EMPTY, TileType.GOAL, TileType.FLAG, TileType.DOOR_OPEN, TileType.PLATFORM, TileType.LADDER}
+        return rules.can_pass_tile(self.atlas, tile)
+
+    def is_passable_for(self, actor: Character, pos: tuple[int, int]) -> bool:
+        if not self.in_bounds(pos):
+            return False
+        tile = self.tiles[pos[1], pos[0]]
+        return rules.can_pass_tile(actor, tile)
 
     def can_stand_on(self, pos: tuple[int, int]) -> bool:
         if not self.in_bounds(pos):
@@ -192,10 +198,15 @@ class GridEnv(gym.Env):
         _apply_vertical_motion(self.world, self.world.human)
 
         mode_reward, mode_events, done, info = self.mode.step(self.world, events, self.rng)
-        reward, reward_terms = compute_reward(mode_reward, events + mode_events)
+        all_events = events + mode_events
+        reward, reward_terms = compute_reward(mode_reward, all_events)
+        exp_from_objectives = rules.objective_exp_from(mode_reward, all_events)
+        progression = rules.grant_exp(atlas, exp_from_objectives) if exp_from_objectives > 0 else {"exp_gained": 0, "levels_gained": 0, "level": atlas.level, "exp": atlas.exp}
+        reward_terms["exp_gain"] = float(progression["exp_gained"])
         if info is None:
             info = {}
         info["reward_terms"] = reward_terms
+        info["progression"] = progression
         self._steps += 1
         if self._steps >= self.config.world.max_episode_steps:
             done = True
