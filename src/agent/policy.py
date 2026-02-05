@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Any
 
+import gymnasium as gym
 from sb3_contrib import RecurrentPPO
 
 from src.config import AtlasConfig
@@ -27,3 +30,43 @@ def build_model(env, config: AtlasConfig) -> RecurrentPPO:
         seed=config.training.seed,
     )
     return model
+
+
+def observation_schema_signature(observation_space: gym.Space) -> dict[str, Any]:
+    """Build a JSON-serialisable schema signature for observation compatibility checks."""
+
+    if isinstance(observation_space, gym.spaces.Dict):
+        return {
+            "type": "dict",
+            "keys": {
+                key: observation_schema_signature(subspace)
+                for key, subspace in sorted(observation_space.spaces.items(), key=lambda item: item[0])
+            },
+        }
+    if isinstance(observation_space, gym.spaces.Box):
+        return {
+            "type": "box",
+            "shape": list(observation_space.shape),
+            "dtype": str(observation_space.dtype),
+        }
+    if isinstance(observation_space, gym.spaces.Discrete):
+        return {
+            "type": "discrete",
+            "n": int(observation_space.n),
+        }
+    if isinstance(observation_space, gym.spaces.MultiBinary):
+        return {
+            "type": "multibinary",
+            "n": int(observation_space.n),
+        }
+    if isinstance(observation_space, gym.spaces.MultiDiscrete):
+        return {
+            "type": "multidiscrete",
+            "nvec": observation_space.nvec.tolist(),
+        }
+    return {"type": observation_space.__class__.__name__}
+
+
+def schema_hash(schema: dict[str, Any]) -> str:
+    encoded = json.dumps(schema, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
