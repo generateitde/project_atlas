@@ -5,6 +5,7 @@ from src.core.types import TILE_PROPS, Character, Vec2
 
 GRAVITY = 0.2
 MAX_FALL_SPEED = 3.0
+JUMP_COOLDOWN_TICKS = 6
 
 
 def apply_gravity(character: Character, can_stand: bool) -> None:

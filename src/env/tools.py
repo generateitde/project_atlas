@@ -69,8 +69,12 @@ def move(world, actor_id: str, direction: str) -> ToolResult:
 
 def precheck_jump(world, actor_id: str) -> ToolResult:
     actor = world.get_actor(actor_id)
+    if actor.jump_cooldown > 0:
+        return _result(False, error_code="cooldown")
+    if actor.can_fly:
+        return _result(True)
     below = (int(actor.pos.x), int(actor.pos.y + 1))
-    if not world.can_stand_on(below):
+    if not world.can_stand_on(below) or not actor.grounded:
         return _result(False, error_code="not_grounded")
     return _result(True)
 
@@ -81,7 +85,9 @@ def jump(world, actor_id: str) -> ToolResult:
         return precheck
     actor = world.get_actor(actor_id)
     actor.jump_remaining = int(actor.jump_power)
-    actor.vel.y = 0
+    actor.vel.y = -actor.jump_power
+    actor.jump_cooldown = rules.JUMP_COOLDOWN_TICKS
+    actor.grounded = False
     return _result(True)
 
 
