@@ -24,6 +24,10 @@ class Renderer:
         goal_text: str = "",
         ai_mode: str = "explore",
         waiting_for_response: bool = False,
+        debug_hud: bool = False,
+        last_action: str = "None",
+        reward_terms: dict[str, float] | None = None,
+        subgoal_text: str = "",
     ) -> None:
         surface.fill((10, 10, 20))
         max_text_width = surface.get_width() - 8
@@ -71,5 +75,49 @@ class Renderer:
             )
             chat_y += line_offset
         self.last_chat_bottom = chat_y
+
+        if debug_hud:
+            debug_x = 6
+            debug_y = 6
+            debug_width = self.width * self.tile_size - 12
+            self.ui.draw_text(surface, "DEBUG HUD (F3)", (debug_x, debug_y), (255, 220, 120))
+            debug_y += self.font.get_linesize()
+            debug_y += self.ui.draw_wrapped_text(
+                surface,
+                f"Mode: {mode_name}",
+                (debug_x, debug_y),
+                debug_width,
+                (220, 220, 220),
+            )
+            subgoal_label = subgoal_text if subgoal_text else "-"
+            debug_y += self.ui.draw_wrapped_text(
+                surface,
+                f"Subgoal: {subgoal_label}",
+                (debug_x, debug_y),
+                debug_width,
+                (200, 200, 200),
+            )
+            debug_y += self.ui.draw_wrapped_text(
+                surface,
+                f"Last Action: {last_action}",
+                (debug_x, debug_y),
+                debug_width,
+                (200, 200, 200),
+            )
+            terms = reward_terms or {}
+            if terms:
+                terms_line = (
+                    "Reward: "
+                    f"mode={terms.get('mode', 0.0):+.2f} "
+                    f"progress={terms.get('progress', 0.0):+.2f} "
+                    f"explore={terms.get('explore', 0.0):+.2f} "
+                    f"preference={terms.get('preference', 0.0):+.2f} "
+                    f"shaping={terms.get('shaping', 0.0):+.2f} "
+                    f"step_cost={terms.get('step_cost', 0.0):+.2f} "
+                    f"total={terms.get('total', 0.0):+.2f}"
+                )
+            else:
+                terms_line = "Reward: (no data yet)"
+            self.ui.draw_wrapped_text(surface, terms_line, (debug_x, debug_y), debug_width, (160, 220, 160))
 
         # TODO: Add animations for movement and combat.

@@ -13,6 +13,7 @@ from src.agent.trainer import AtlasTrainer
 from src.config import DEFAULT_CONFIG_PATH, load_config
 from src.console import Console
 from src.env.grid_env import GridEnv
+from src.env import encoding
 from src.human.input_keyboard import KeyboardController
 from src.logging.db import DBLogger
 from src.logging.replay import export_steps
@@ -33,6 +34,10 @@ class AtlasGame:
         self.question_interval = 120
         self.goal_text = ""
         self.fullscreen = False
+        self.show_debug_hud = False
+        self.last_action_name = "None"
+        self.last_reward_terms: dict[str, float] = {}
+        self.subgoal_text = ""
         self.renderer = None
         self.keyboard = KeyboardController(self.env.world, self.config.controls)
         self.trainer = AtlasTrainer(self.config, Path("checkpoints"))
@@ -120,6 +125,8 @@ class AtlasGame:
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
                     self.fullscreen = not self.fullscreen
                     surface = self._create_display(width, height, tile_size)
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
+                    self.show_debug_hud = not self.show_debug_hud
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F5:
                     self.save()
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F9:
@@ -160,7 +167,9 @@ class AtlasGame:
             if not self.ai_paused and not self.waiting_for_response:
                 action, self.recurrent_state = self.trainer.predict(obs, state=self.recurrent_state, mask=self.episode_start)
                 obs, reward, done, _, info = self.env.step(int(action))
-                self.db.log_step(obs, int(action), float(reward), bool(done), info)
+                self.last_action_name = encoding.ACTION_MEANINGS.get(int(action), f"Action {int(action)}")
+                self.last_reward_terms = info.get("reward_terms", {})
+                self.db.log_step(obs, int(action), float(reward), bool(done), info, self.last_reward_terms)
                 self.episode_start = done
                 if done:
                     obs, _ = self.env.reset()
@@ -175,6 +184,10 @@ class AtlasGame:
                     goal_text=self.goal_text,
                     ai_mode=self.ai_mode,
                     waiting_for_response=self.waiting_for_response,
+                    debug_hud=self.show_debug_hud,
+                    last_action=self.last_action_name,
+                    reward_terms=self.last_reward_terms,
+                    subgoal_text=self.subgoal_text,
                 )
                 font = self.renderer.font
                 ui = self.renderer.ui
