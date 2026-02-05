@@ -91,7 +91,7 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T3.4 HideAndSeek Vollständig
+NEXT TASK: T4.1 Goal Stack + Subgoals
 
 ### Next Items
 - [x] T1.1 Reward Breakdown + Debug Overlay
@@ -101,7 +101,7 @@ NEXT TASK: T3.4 HideAndSeek Vollständig
 - [x] T3.1 Mode Interface Refactor + Mode HUD
 - [x] T3.2 ExitGame Solvable Generator (Baseline)
 - [x] T3.3 CaptureTheFlag Vollständig
-- [ ] T3.4 HideAndSeek Vollständig
+- [x] T3.4 HideAndSeek Vollständig
 - [ ] T4.1 Goal Stack + Subgoals
 - [ ] T4.2 Stuck Detector + Uncertainty Gate für ask_human
 - [ ] T5.1 EXP/Level Persistenz + Gates
