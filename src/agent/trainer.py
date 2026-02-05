@@ -11,6 +11,70 @@ from src.agent.policy import build_model
 from src.agent.preference_reward import PreferenceRewardModel, extract_state_features
 from src.agent.world_model import GoalManager
 from src.config import AtlasConfig
+from src.env.modes import CurriculumStage, default_curriculum_stages, mode_success
+
+
+@dataclass
+class CurriculumManager:
+    stages: list[CurriculumStage] = field(default_factory=default_curriculum_stages)
+    stage_index: int = 0
+    completed_episodes: int = 0
+    stage_episodes: int = 0
+    stage_successes: int = 0
+    stage_return_sum: float = 0.0
+
+    def current_stage(self) -> CurriculumStage:
+        return self.stages[min(self.stage_index, len(self.stages) - 1)]
+
+    def should_transition(self) -> bool:
+        stage = self.current_stage()
+        if self.stage_episodes < stage.min_episodes:
+            return False
+        avg_return = self.stage_return_sum / max(1, self.stage_episodes)
+        success_rate = self.stage_successes / max(1, self.stage_episodes)
+        return success_rate >= stage.min_success_rate and avg_return >= stage.min_avg_return
+
+    def record_episode(self, *, success: bool, episode_return: float) -> tuple[bool, str | None]:
+        self.completed_episodes += 1
+        self.stage_episodes += 1
+        self.stage_return_sum += float(episode_return)
+        if success:
+            self.stage_successes += 1
+
+        if self.stage_index >= len(self.stages) - 1:
+            return False, None
+        if not self.should_transition():
+            return False, None
+
+        prev = self.current_stage()
+        avg_return = self.stage_return_sum / max(1, self.stage_episodes)
+        success_rate = self.stage_successes / max(1, self.stage_episodes)
+        reason = (
+            f"advanced after {self.stage_episodes} eps; "
+            f"success_rate={success_rate:.2f} >= {prev.min_success_rate:.2f}, "
+            f"avg_return={avg_return:.2f} >= {prev.min_avg_return:.2f}"
+        )
+        self.stage_index += 1
+        self.stage_episodes = 0
+        self.stage_successes = 0
+        self.stage_return_sum = 0.0
+        return True, reason
+
+    def status(self) -> dict[str, float | int | str]:
+        stage = self.current_stage()
+        avg_return = self.stage_return_sum / max(1, self.stage_episodes)
+        success_rate = self.stage_successes / max(1, self.stage_episodes)
+        return {
+            "stage_name": stage.name,
+            "stage_index": self.stage_index,
+            "episodes_total": self.completed_episodes,
+            "stage_episodes": self.stage_episodes,
+            "stage_success_rate": success_rate,
+            "stage_avg_return": avg_return,
+            "stage_min_episodes": stage.min_episodes,
+            "stage_target_success_rate": stage.min_success_rate,
+            "stage_target_avg_return": stage.min_avg_return,
+        }
 
 
 @dataclass
@@ -22,6 +86,7 @@ class AtlasTrainer:
     dagger: DAgger = field(default_factory=DAgger)
     imitation: ImitationBuffer = field(default_factory=ImitationBuffer)
     preference_model: PreferenceRewardModel = field(default_factory=PreferenceRewardModel)
+    curriculum: CurriculumManager = field(default_factory=CurriculumManager)
 
     def load(self, env) -> None:
         checkpoint = self.checkpoint_dir / "atlas_model.zip"
@@ -52,7 +117,6 @@ class AtlasTrainer:
         guided_action = self.imitation.select_action(obs, scalar_action)
         return guided_action, next_state
 
-
     def record_preference_feedback(self, obs: dict, text: str, score: int) -> None:
         features = extract_state_features(obs)
         self.preference_model.add_feedback(features, text, int(score))
@@ -78,7 +142,6 @@ class AtlasTrainer:
         goal_state = self.goal_manager.update(mode_name, mode_info)
         return goal_state.active_subgoal
 
-
     def snapshot_progression(self, actor) -> dict[str, int]:
         return {"level": int(actor.level), "exp": int(actor.exp)}
 
@@ -87,3 +150,10 @@ class AtlasTrainer:
             return
         actor.level = int(snapshot.get("level", actor.level))
         actor.exp = int(snapshot.get("exp", actor.exp))
+
+    def current_curriculum_stage(self) -> CurriculumStage:
+        return self.curriculum.current_stage()
+
+    def record_curriculum_episode(self, *, mode_name: str, mode_info: dict, episode_return: float) -> tuple[bool, str | None]:
+        success = mode_success(mode_name, mode_info)
+        return self.curriculum.record_episode(success=success, episode_return=episode_return)

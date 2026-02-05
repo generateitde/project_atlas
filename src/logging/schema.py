@@ -14,6 +14,8 @@ class Episode(Base):
     mode = Column(String(64))
     world_hash = Column(String(64))
     started_at = Column(String(64))
+    curriculum_stage = Column(String(64))
+    stage_transition_reason = Column(Text)
 
 
 class Step(Base):

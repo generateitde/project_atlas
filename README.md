@@ -91,12 +91,12 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T8.1 Curriculum Pipeline v1 (automated stage progression)
+NEXT TASK: T8.2 Deterministic Evaluation Harness + Trend Reports
 
 ### Next Items
 - [x] T6.3 Preference Reward Model
 - [x] T7.1 Extend Roadmap (new Epic planning)
-- [ ] T8.1 Curriculum Pipeline v1 (automated stage progression)
+- [x] T8.1 Curriculum Pipeline v1 (automated stage progression)
 - [ ] T8.2 Deterministic Evaluation Harness + Trend Reports
 - [ ] T8.3 Policy Export + Runtime Inference Mode
 - [ ] T9.1 Multi-Mode Replay Buffer + Sampling Strategy

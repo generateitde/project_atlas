@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pygame
 from dotenv import load_dotenv
-from gymnasium.vector import SyncVectorEnv
 
 from src.agent.trainer import AtlasTrainer
 from src.config import DEFAULT_CONFIG_PATH, load_config
@@ -310,15 +309,70 @@ class AtlasGame:
         return pygame.display.set_mode((width * tile_size, height * tile_size + 120), flags)
 
 
+def _apply_curriculum_stage(env: GridEnv, trainer: AtlasTrainer) -> None:
+    stage = trainer.current_curriculum_stage()
+    env.preset = stage.preset
+    env.reset(seed=env.seed_value)
+    env.set_mode(stage.mode, stage.mode_params)
+
+
+
 def train_headless(config_path: Path | None, steps: int) -> None:
     config = load_config(config_path)
-    def make_env():
-        return GridEnv(config)
-
-    env = SyncVectorEnv([make_env for _ in range(config.training.n_envs)])
+    env = GridEnv(config)
     trainer = AtlasTrainer(config, Path("checkpoints"))
     trainer.load(env)
-    trainer.train_steps(steps)
+    db = DBLogger(Path("atlas.db"))
+
+    chunk_steps = max(2000, min(5000, steps // 4 if steps > 0 else 2000))
+    remaining = steps
+    transition_reason = "initial_stage"
+
+    while remaining > 0:
+        _apply_curriculum_stage(env, trainer)
+        stage = trainer.current_curriculum_stage()
+        db.start_episode(
+            env.preset,
+            env.seed_value,
+            env.mode.name,
+            datetime.utcnow().isoformat(),
+            env.world_hash,
+            curriculum_stage=stage.name,
+            stage_transition_reason=transition_reason,
+        )
+        trainer.train_steps(min(chunk_steps, remaining))
+        remaining -= min(chunk_steps, remaining)
+
+        # Evaluate current stage and potentially advance.
+        obs, _ = env.reset(seed=env.seed_value)
+        env.set_mode(stage.mode, stage.mode_params)
+        done = False
+        episode_return = 0.0
+        recurrent_state = None
+        episode_start = True
+        while not done:
+            action, recurrent_state = trainer.predict(obs, state=recurrent_state, mask=episode_start)
+            obs, reward, done, _, _ = env.step(int(action))
+            episode_start = bool(done)
+            episode_return += float(reward)
+
+        transitioned, reason = trainer.record_curriculum_episode(
+            mode_name=env.mode.name,
+            mode_info=env.mode.info(),
+            episode_return=episode_return,
+        )
+        transition_reason = reason or "stage_retained"
+        if transitioned:
+            next_stage = trainer.current_curriculum_stage()
+            db.log_event(
+                "curriculum_stage_transition",
+                {
+                    "from_stage": stage.name,
+                    "to_stage": next_stage.name,
+                    "reason": reason,
+                },
+            )
+
     trainer.save()
 
 
