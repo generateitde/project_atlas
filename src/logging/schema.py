@@ -70,3 +70,13 @@ class HumanFeedback(Base):
     score = Column(Integer)
     correction_text = Column(Text)
     state_features_json = Column(Text)
+
+
+class ReplayBufferStat(Base):
+    __tablename__ = "replay_buffer_stats"
+    id = Column(Integer, primary_key=True)
+    episode_id = Column(Integer)
+    tick = Column(Integer)
+    total_transitions = Column(Integer)
+    sample_entropy = Column(Float)
+    mode_coverage_json = Column(Text)

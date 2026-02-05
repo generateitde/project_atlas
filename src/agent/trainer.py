@@ -9,6 +9,7 @@ from src.agent.dagger import DAgger
 from src.agent.imitation import ImitationBuffer
 from src.agent.policy import build_model
 from src.agent.preference_reward import PreferenceRewardModel, extract_state_features
+from src.agent.replay_buffer import MultiModeReplayBuffer, ReplayTransition, SamplingStrategy
 from src.agent.world_model import GoalManager
 from src.config import AtlasConfig
 from src.env.modes import CurriculumStage, default_curriculum_stages, mode_success
@@ -87,6 +88,7 @@ class AtlasTrainer:
     imitation: ImitationBuffer = field(default_factory=ImitationBuffer)
     preference_model: PreferenceRewardModel = field(default_factory=PreferenceRewardModel)
     curriculum: CurriculumManager = field(default_factory=CurriculumManager)
+    replay_buffer: MultiModeReplayBuffer = field(default_factory=MultiModeReplayBuffer)
 
     def load(self, env) -> None:
         checkpoint = self.checkpoint_dir / "atlas_model.zip"
@@ -128,6 +130,33 @@ class AtlasTrainer:
 
     def record_human_action(self, obs: dict, action: int) -> None:
         self.imitation.add(obs, int(action))
+
+    def record_transition(
+        self,
+        *,
+        mode_name: str,
+        obs: dict,
+        action: int,
+        reward: float,
+        next_obs: dict,
+        done: bool,
+        priority: float | None = None,
+    ) -> None:
+        self.replay_buffer.add(
+            mode=mode_name,
+            obs=obs,
+            action=action,
+            reward=reward,
+            next_obs=next_obs,
+            done=done,
+            priority=priority,
+        )
+
+    def sample_replay(self, batch_size: int, strategy: SamplingStrategy = "uniform") -> list[ReplayTransition]:
+        return self.replay_buffer.sample(batch_size, strategy)
+
+    def replay_buffer_stats(self) -> dict:
+        return self.replay_buffer.stats()
 
     def reset_dagger(self) -> None:
         self.dagger.reset()

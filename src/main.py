@@ -251,6 +251,14 @@ class AtlasGame:
                 action_name = encoding.ACTION_MEANINGS.get(int(action), f"Action {int(action)}")
                 predicted_preference = self.trainer.preference_reward(current_obs, action_name)
                 obs, reward, done, _, info = self.env.step(int(action), preference_reward=predicted_preference)
+                self.trainer.record_transition(
+                    mode_name=self.env.mode.name,
+                    obs=current_obs,
+                    action=int(action),
+                    reward=float(reward),
+                    next_obs=obs,
+                    done=bool(done),
+                )
                 self.last_action_name = action_name
                 self.last_reward_terms = info.get("reward_terms", {})
                 progress_signal = float(self.last_reward_terms.get("progress", 0.0))
@@ -268,6 +276,8 @@ class AtlasGame:
                     self._request_dagger_action(obs)
                 self.subgoal_text = self.trainer.update_goals(self.env.mode.name, self.env.mode.info())
                 self.db.log_step(obs, int(action), float(reward), bool(done), info, self.last_reward_terms)
+                if self.db.tick % 100 == 0:
+                    self.db.log_replay_buffer_stats(self.trainer.replay_buffer_stats())
                 self.episode_start = done
                 if done:
                     obs, _ = self.env.reset()

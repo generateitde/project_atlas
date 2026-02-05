@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from src.logging.schema import Base, Episode, Event, HumanAction, HumanFeedback, Step
+from src.logging.schema import Base, Episode, Event, HumanAction, HumanFeedback, ReplayBufferStat, Step
 
 
 class DBLogger:
@@ -102,6 +102,20 @@ class DBLogger:
                 score=int(score),
                 correction_text=correction_text,
                 state_features_json=json.dumps(state_features or []),
+            )
+            session.add(row)
+            session.commit()
+
+    def log_replay_buffer_stats(self, stats: dict[str, Any]) -> None:
+        if self.episode_id is None:
+            return
+        with Session(self.engine) as session:
+            row = ReplayBufferStat(
+                episode_id=self.episode_id,
+                tick=self.tick,
+                total_transitions=int(stats.get("total_transitions", 0)),
+                sample_entropy=float(stats.get("sample_entropy", 0.0)),
+                mode_coverage_json=json.dumps(stats.get("mode_coverage", {}), default=str),
             )
             session.add(row)
             session.commit()

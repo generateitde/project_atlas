@@ -91,7 +91,7 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T9.1 Multi-Mode Replay Buffer + Sampling Strategy
+NEXT TASK: T9.2 Offline RL Fine-Tuning (CQL/IQL baseline)
 
 ### Next Items
 - [x] T6.3 Preference Reward Model
@@ -99,7 +99,7 @@ NEXT TASK: T9.1 Multi-Mode Replay Buffer + Sampling Strategy
 - [x] T8.1 Curriculum Pipeline v1 (automated stage progression)
 - [x] T8.2 Deterministic Evaluation Harness + Trend Reports
 - [x] T8.3 Policy Export + Runtime Inference Mode
-- [ ] T9.1 Multi-Mode Replay Buffer + Sampling Strategy
+- [x] T9.1 Multi-Mode Replay Buffer + Sampling Strategy
 - [ ] T9.2 Offline RL Fine-Tuning (CQL/IQL baseline)
 - [ ] T9.3 Safety Guardrails for Tool Usage in Policy Loop
 
@@ -348,6 +348,10 @@ NEXT TASK: T9.1 Multi-Mode Replay Buffer + Sampling Strategy
   - mode-balanced Sampling zeigt annähernd ausgeglichene Batch-Anteile über 10k Samples.
   - Buffer-Stats werden periodisch geloggt.
 - **Done Definition:** Datenabdeckung über Modes messbar und steuerbar.
+- **Akzeptanztests (implementiert):**
+  - ✅ `tests/test_replay_buffer.py::test_mode_balanced_sampling_is_near_even_over_many_samples` validiert mode-balanced Sampling über 10k Samples.
+  - ✅ `tests/test_replay_buffer.py::test_replay_buffer_stats_are_logged_to_db` validiert periodisches Buffer-Stats Logging via DB Schema.
+- **Status:** DONE
 
 ### T9.2 Offline RL Fine-Tuning (CQL/IQL baseline)
 - **Problem:** Gesammelte Demos/Logs werden nicht effizient für robustes Fine-Tuning genutzt.
