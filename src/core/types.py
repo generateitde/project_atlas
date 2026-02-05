@@ -81,6 +81,8 @@ class Character:
     exp: int = 0
     transform_state: Optional[str] = None
     jump_remaining: int = 0
+    jump_cooldown: int = 0
+    grounded: bool = False
 
 
 @dataclass

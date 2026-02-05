@@ -19,16 +19,41 @@ from src.env.world_gen import default_spawn, generate_world, world_snapshot_hash
 
 
 def _apply_vertical_motion(world: World, actor: Character) -> None:
+    if actor.jump_cooldown > 0:
+        actor.jump_cooldown -= 1
+    if actor.can_fly:
+        actor.jump_remaining = 0
+        actor.vel.y = 0
+        actor.grounded = False
+        return
     if actor.jump_remaining > 0:
         next_y = actor.pos.y - 1
         target = (int(actor.pos.x), int(next_y))
         if world.is_passable(target):
             actor.pos.y = next_y
             actor.jump_remaining -= 1
-            return
-        actor.jump_remaining = 0
-    rules.apply_gravity(actor, can_stand=world.can_stand_on((int(actor.pos.x), int(actor.pos.y + 1))))
-    actor.pos.y += actor.vel.y * 0.1
+        else:
+            actor.jump_remaining = 0
+        actor.vel.y = min(actor.vel.y + rules.GRAVITY, rules.MAX_FALL_SPEED)
+        actor.grounded = False
+        return
+    below = (int(actor.pos.x), int(actor.pos.y + 1))
+    rules.apply_gravity(actor, can_stand=world.can_stand_on(below))
+    next_y = actor.pos.y + actor.vel.y * 0.1
+    if actor.vel.y > 0:
+        target = (int(actor.pos.x), int(next_y))
+        if world.in_bounds(target):
+            props = TILE_PROPS[world.tiles[target[1], target[0]]]
+            if props.solid or props.one_way_platform:
+                if int(actor.pos.y) < target[1]:
+                    actor.pos.y = float(target[1] - 1)
+                    actor.vel.y = 0
+                    actor.grounded = True
+                    return
+    actor.pos.y = next_y
+    actor.grounded = world.can_stand_on((int(actor.pos.x), int(actor.pos.y + 1))) and actor.vel.y >= 0
+    if actor.grounded:
+        actor.vel.y = 0
 
 
 @dataclass
@@ -117,7 +142,10 @@ class GridEnv(gym.Env):
         self.world_hash = world_snapshot_hash(tiles)
         atlas = Character(entity_id="ai_atlas", display_name="Atlas", pos=default_spawn(self.config.world.width, self.config.world.height))
         human = Character(entity_id="human", display_name="Human", pos=Vec2(atlas.pos.x + 1, atlas.pos.y))
-        return World(tiles=tiles, atlas=atlas, human=human)
+        world = World(tiles=tiles, atlas=atlas, human=human)
+        for actor in (world.atlas, world.human):
+            actor.grounded = world.can_stand_on((int(actor.pos.x), int(actor.pos.y + 1)))
+        return world
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
