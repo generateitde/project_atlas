@@ -159,6 +159,7 @@ class GridEnv(gym.Env):
 
     def set_mode(self, name: str, params: dict | None = None) -> None:
         self.mode = create_mode(name, params)
+        self.mode.reset(self.world, self.rng)
 
     def step(self, action: int):
         events: list[Event] = []
