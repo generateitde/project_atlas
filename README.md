@@ -91,7 +91,7 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T4.1 Goal Stack + Subgoals
+NEXT TASK: T4.2 Stuck Detector + Uncertainty Gate für ask_human
 
 ### Next Items
 - [x] T1.1 Reward Breakdown + Debug Overlay
@@ -102,7 +102,7 @@ NEXT TASK: T4.1 Goal Stack + Subgoals
 - [x] T3.2 ExitGame Solvable Generator (Baseline)
 - [x] T3.3 CaptureTheFlag Vollständig
 - [x] T3.4 HideAndSeek Vollständig
-- [ ] T4.1 Goal Stack + Subgoals
+- [x] T4.1 Goal Stack + Subgoals
 - [ ] T4.2 Stuck Detector + Uncertainty Gate für ask_human
 - [ ] T5.1 EXP/Level Persistenz + Gates
 - [ ] T5.2 Transformations
