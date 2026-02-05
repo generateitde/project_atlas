@@ -91,12 +91,12 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T2.1 Tool Contracts + Validation Layer
+NEXT TASK: T2.2 Jump/Gravity State Machine + One-Way Platforms
 
 ### Next Items
 - [x] T1.1 Reward Breakdown + Debug Overlay
 - [x] T1.2 Seed Repro & World Snapshot
-- [ ] T2.1 Tool Contracts + Validation Layer
+- [x] T2.1 Tool Contracts + Validation Layer
 - [ ] T2.2 Jump/Gravity State Machine + One-Way Platforms
 - [ ] T3.1 Mode Interface Refactor + Mode HUD
 - [ ] T3.2 ExitGame Solvable Generator (Baseline)
