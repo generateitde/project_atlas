@@ -26,6 +26,8 @@ def _dir_to_delta(direction: str) -> tuple[int, int]:
 
 
 def move(world, actor_id: str, direction: str) -> ToolResult:
+    if direction in {"N", "S"}:
+        return ToolResult(False, {}, [], "blocked")
     dx, dy = _dir_to_delta(direction)
     actor = world.get_actor(actor_id)
     actor.facing = Facing(direction)
