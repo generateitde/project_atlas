@@ -6,6 +6,8 @@ from src.core.types import TILE_PROPS, Character, Vec2
 GRAVITY = 0.2
 MAX_FALL_SPEED = 3.0
 JUMP_COOLDOWN_TICKS = 6
+BASE_EXP_TO_LEVEL = 10
+EXP_LEVEL_SCALING = 5
 
 
 def apply_gravity(character: Character, can_stand: bool) -> None:
@@ -23,6 +25,42 @@ def move_character(character: Character, dx: float, dy: float) -> None:
 
 def is_passable(tile) -> bool:
     return TILE_PROPS[tile].passable
+
+
+def can_pass_tile(actor: Character, tile) -> bool:
+    props = TILE_PROPS[tile]
+    if props.passable:
+        return True
+    if props.gate_req_level > 0 and actor.level >= props.gate_req_level:
+        return True
+    return False
+
+
+def exp_to_next_level(level: int) -> int:
+    return BASE_EXP_TO_LEVEL + max(level - 1, 0) * EXP_LEVEL_SCALING
+
+
+def grant_exp(actor: Character, amount: int) -> dict[str, int]:
+    gained = max(0, int(amount))
+    actor.exp += gained
+    levels_gained = 0
+    while actor.exp >= exp_to_next_level(actor.level):
+        actor.exp -= exp_to_next_level(actor.level)
+        actor.level += 1
+        levels_gained += 1
+    return {"exp_gained": gained, "levels_gained": levels_gained, "level": actor.level, "exp": actor.exp}
+
+
+def objective_exp_from(mode_reward: float, events: list) -> int:
+    event_exp = {
+        "enemy_defeated": 10,
+        "ctf_scored": 12,
+        "hide_target_found": 8,
+    }
+    total = sum(event_exp.get(getattr(event, "type", ""), 0) for event in events)
+    if mode_reward >= 5.0:
+        total += 6
+    return total
 
 
 def is_adjacent(a: tuple[int, int], b: tuple[int, int]) -> bool:
@@ -43,4 +81,3 @@ def find_tiles(tiles, tile_type) -> list[tuple[int, int]]:
             if tiles[y, x] == tile_type:
                 positions.append((x, y))
     return positions
-

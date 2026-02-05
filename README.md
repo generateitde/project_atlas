@@ -91,7 +91,7 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T5.1 EXP/Level Persistenz + Gates
+NEXT TASK: T5.2 Transformations
 
 ### Next Items
 - [x] T1.1 Reward Breakdown + Debug Overlay
@@ -104,7 +104,7 @@ NEXT TASK: T5.1 EXP/Level Persistenz + Gates
 - [x] T3.4 HideAndSeek Vollständig
 - [x] T4.1 Goal Stack + Subgoals
 - [x] T4.2 Stuck Detector + Uncertainty Gate für ask_human
-- [ ] T5.1 EXP/Level Persistenz + Gates
+- [x] T5.1 EXP/Level Persistenz + Gates
 - [ ] T5.2 Transformations
 - [ ] T5.3 Fly Items + Floating Islands
 - [ ] T6.1 Behavior Cloning Aux Loss richtig

@@ -50,7 +50,7 @@ def precheck_move(world, actor_id: str, direction: str) -> ToolResult:
     target = (int(actor.pos.x + dx), int(actor.pos.y + dy))
     if not world.in_bounds(target):
         return _result(False, error_code="out_of_bounds")
-    if not world.is_passable(target):
+    if not world.is_passable_for(actor, target):
         return _result(False, error_code="blocked")
     return _result(True)
 

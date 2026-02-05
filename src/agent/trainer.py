@@ -54,3 +54,13 @@ class AtlasTrainer:
     def update_goals(self, mode_name: str, mode_info: dict | None = None) -> str:
         goal_state = self.goal_manager.update(mode_name, mode_info)
         return goal_state.active_subgoal
+
+
+    def snapshot_progression(self, actor) -> dict[str, int]:
+        return {"level": int(actor.level), "exp": int(actor.exp)}
+
+    def restore_progression(self, actor, snapshot: dict[str, int] | None) -> None:
+        if not snapshot:
+            return
+        actor.level = int(snapshot.get("level", actor.level))
+        actor.exp = int(snapshot.get("exp", actor.exp))
