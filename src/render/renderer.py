@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pygame
 from src.render.sprite_db import SpriteDB
 from src.render.ui_overlays import UIOverlays
@@ -28,6 +30,7 @@ class Renderer:
         last_action: str = "None",
         reward_terms: dict[str, float] | None = None,
         subgoal_text: str = "",
+        mode_info: dict[str, Any] | None = None,
     ) -> None:
         surface.fill((10, 10, 20))
         max_text_width = surface.get_width() - 8
@@ -42,6 +45,25 @@ class Renderer:
 
         hud_y = self.height * self.tile_size + 4
         offset = self.ui.draw_wrapped_text(surface, f"Mode: {mode_name}", (4, hud_y), max_text_width)
+        if mode_info:
+            objective = mode_info.get("objective") or ""
+            status = mode_info.get("status") or ""
+            if objective:
+                offset += self.ui.draw_wrapped_text(
+                    surface,
+                    f"Objective: {objective}",
+                    (4, hud_y + offset),
+                    max_text_width,
+                    (180, 220, 180),
+                )
+            if status:
+                offset += self.ui.draw_wrapped_text(
+                    surface,
+                    f"Status: {status}",
+                    (4, hud_y + offset),
+                    max_text_width,
+                    (200, 200, 200),
+                )
         offset += self.ui.draw_wrapped_text(
             surface,
             f"Atlas HP: {atlas.hp} Lvl: {atlas.level} EXP: {atlas.exp}",

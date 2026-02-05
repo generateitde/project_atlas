@@ -201,6 +201,7 @@ class AtlasGame:
                     last_action=self.last_action_name,
                     reward_terms=self.last_reward_terms,
                     subgoal_text=self.subgoal_text,
+                    mode_info=self.env.mode.info(),
                 )
                 font = self.renderer.font
                 ui = self.renderer.ui
