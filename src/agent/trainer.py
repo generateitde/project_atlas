@@ -8,6 +8,7 @@ from sb3_contrib import RecurrentPPO
 from src.agent.dagger import DAgger
 from src.agent.imitation import ImitationBuffer
 from src.agent.policy import build_model
+from src.agent.preference_reward import PreferenceRewardModel, extract_state_features
 from src.agent.world_model import GoalManager
 from src.config import AtlasConfig
 
@@ -20,6 +21,7 @@ class AtlasTrainer:
     goal_manager: GoalManager = field(default_factory=GoalManager)
     dagger: DAgger = field(default_factory=DAgger)
     imitation: ImitationBuffer = field(default_factory=ImitationBuffer)
+    preference_model: PreferenceRewardModel = field(default_factory=PreferenceRewardModel)
 
     def load(self, env) -> None:
         checkpoint = self.checkpoint_dir / "atlas_model.zip"
@@ -49,6 +51,16 @@ class AtlasTrainer:
             return action, next_state
         guided_action = self.imitation.select_action(obs, scalar_action)
         return guided_action, next_state
+
+
+    def record_preference_feedback(self, obs: dict, text: str, score: int) -> None:
+        features = extract_state_features(obs)
+        self.preference_model.add_feedback(features, text, int(score))
+        self.preference_model.train()
+
+    def preference_reward(self, obs: dict, text: str) -> float:
+        features = extract_state_features(obs)
+        return self.preference_model.score(features, text)
 
     def record_human_action(self, obs: dict, action: int) -> None:
         self.imitation.add(obs, int(action))

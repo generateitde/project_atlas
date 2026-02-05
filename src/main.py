@@ -16,6 +16,7 @@ from src.env.grid_env import GridEnv
 from src.env import encoding
 from src.human.input_keyboard import KeyboardController
 from src.human.chat_ui import format_action_choices, parse_human_action_choice
+from src.agent.preference_reward import extract_state_features, parse_scored_feedback
 from src.logging.db import DBLogger
 from src.logging.replay import export_steps
 from src.render.renderer import Renderer
@@ -140,6 +141,23 @@ class AtlasGame:
         self.trainer.record_human_action(obs, parsed_action)
         self.env.world.messages.append(("Atlas", f"Danke, ich nutze Aktion {parsed_action}."))
 
+    def _handle_preference_feedback(self, obs: dict, message: str) -> bool:
+        score, feedback_text = parse_scored_feedback(message)
+        if score is None:
+            return False
+        text_for_model = feedback_text or self.last_action_name
+        self.trainer.record_preference_feedback(obs, text_for_model, score)
+        state_features = extract_state_features(obs).tolist()
+        self.db.log_human_feedback(
+            target="atlas",
+            msg_type="preference",
+            score=score,
+            correction_text=text_for_model,
+            state_features=state_features,
+        )
+        self.env.world.messages.append(("Atlas", f"Preference gespeichert: {score:+d} für '{text_for_model}'."))
+        return True
+
     def run(self) -> None:
         pygame.init()
         tile_size = self.config.rendering.tile_size
@@ -176,6 +194,7 @@ class AtlasGame:
                                 self.env.world.messages.append(("Human", message))
                                 if self.env.world.pending_question:
                                     self.env.world.pending_question = False
+                                self._handle_preference_feedback(obs, message)
                             self.chat_buffer = ""
                             self.chat_active = False
                     else:
@@ -227,8 +246,11 @@ class AtlasGame:
 
             if not self.ai_paused and not self.waiting_for_response:
                 action, self.recurrent_state = self.trainer.predict(obs, state=self.recurrent_state, mask=self.episode_start)
-                obs, reward, done, _, info = self.env.step(int(action))
-                self.last_action_name = encoding.ACTION_MEANINGS.get(int(action), f"Action {int(action)}")
+                current_obs = obs
+                action_name = encoding.ACTION_MEANINGS.get(int(action), f"Action {int(action)}")
+                predicted_preference = self.trainer.preference_reward(current_obs, action_name)
+                obs, reward, done, _, info = self.env.step(int(action), preference_reward=predicted_preference)
+                self.last_action_name = action_name
                 self.last_reward_terms = info.get("reward_terms", {})
                 progress_signal = float(self.last_reward_terms.get("progress", 0.0))
                 atlas_pos = (int(self.env.world.atlas.pos.x), int(self.env.world.atlas.pos.y))
