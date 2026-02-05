@@ -12,6 +12,7 @@ class Episode(Base):
     preset = Column(String(64))
     seed = Column(Integer)
     mode = Column(String(64))
+    world_hash = Column(String(64))
     started_at = Column(String(64))
 
 

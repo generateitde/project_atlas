@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import Callable
 
@@ -83,3 +84,9 @@ def generate_world(preset: str, width: int, height: int, rng: RNG) -> np.ndarray
 
 def default_spawn(width: int, height: int) -> Vec2:
     return Vec2(2, height - 2)
+
+
+def world_snapshot_hash(tiles: np.ndarray) -> str:
+    flattened = ",".join(tile.value for tile in tiles.ravel())
+    payload = f"{tiles.shape[0]}x{tiles.shape[1]}|{flattened}".encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()

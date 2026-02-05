@@ -15,7 +15,7 @@ from src.env.modes import Mode, create_mode
 from src.env.rewards import compute_reward
 from src.env import rules
 from src.env.tools import ask_human, break_tile, inspect, jump, move, speak
-from src.env.world_gen import default_spawn, generate_world
+from src.env.world_gen import default_spawn, generate_world, world_snapshot_hash
 
 
 def _apply_vertical_motion(world: World, actor: Character) -> None:
@@ -94,6 +94,7 @@ class GridEnv(gym.Env):
         self.seed_value = seed or config.training.seed
         self.rng = RNG(self.seed_value)
         self.mode: Mode = create_mode("ExitGame")
+        self.world_hash = ""
         self.world = self._build_world()
         radius = config.world.visibility_radius
         tile_shape = (2 * radius + 1, 2 * radius + 1)
@@ -113,6 +114,7 @@ class GridEnv(gym.Env):
 
     def _build_world(self) -> World:
         tiles = generate_world(self.preset, self.config.world.width, self.config.world.height, self.rng)
+        self.world_hash = world_snapshot_hash(tiles)
         atlas = Character(entity_id="ai_atlas", display_name="Atlas", pos=default_spawn(self.config.world.width, self.config.world.height))
         human = Character(entity_id="human", display_name="Human", pos=Vec2(atlas.pos.x + 1, atlas.pos.y))
         return World(tiles=tiles, atlas=atlas, human=human)
