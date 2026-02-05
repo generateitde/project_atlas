@@ -8,6 +8,8 @@ MAX_FALL_SPEED = 3.0
 JUMP_COOLDOWN_TICKS = 6
 BASE_EXP_TO_LEVEL = 10
 EXP_LEVEL_SCALING = 5
+DEFAULT_TRANSFORM_DURATION = 120
+
 
 
 def apply_gravity(character: Character, can_stand: bool) -> None:
@@ -61,6 +63,59 @@ def objective_exp_from(mode_reward: float, events: list) -> int:
     if mode_reward >= 5.0:
         total += 6
     return total
+
+
+def activate_transform(
+    actor: Character,
+    *,
+    transform_id: str = "berserk",
+    duration_ticks: int = DEFAULT_TRANSFORM_DURATION,
+    atk_multiplier: float = 1.5,
+    defense_multiplier: float = 1.25,
+    speed_multiplier: float = 1.2,
+    jump_multiplier: float = 1.2,
+) -> dict[str, float | int | str]:
+    duration = max(1, int(duration_ticks))
+    if actor.transform_stats_backup is None:
+        actor.transform_stats_backup = {
+            "atk": float(actor.atk),
+            "defense": float(actor.defense),
+            "speed": float(actor.speed),
+            "jump_power": float(actor.jump_power),
+        }
+    actor.transform_state = transform_id
+    actor.transform_timer = duration
+    backup = actor.transform_stats_backup
+    actor.atk = max(1, int(round(backup["atk"] * atk_multiplier)))
+    actor.defense = max(0, int(round(backup["defense"] * defense_multiplier)))
+    actor.speed = max(0.1, float(backup["speed"] * speed_multiplier))
+    actor.jump_power = max(1.0, float(backup["jump_power"] * jump_multiplier))
+    return {
+        "transform": transform_id,
+        "duration": duration,
+        "atk": actor.atk,
+        "defense": actor.defense,
+        "speed": actor.speed,
+        "jump_power": actor.jump_power,
+    }
+
+
+def tick_transform(actor: Character) -> bool:
+    if not actor.transform_state:
+        return False
+    if actor.transform_timer > 0:
+        actor.transform_timer -= 1
+    if actor.transform_timer > 0:
+        return False
+    backup = actor.transform_stats_backup or {}
+    actor.atk = int(round(float(backup.get("atk", actor.atk))))
+    actor.defense = int(round(float(backup.get("defense", actor.defense))))
+    actor.speed = float(backup.get("speed", actor.speed))
+    actor.jump_power = float(backup.get("jump_power", actor.jump_power))
+    actor.transform_state = None
+    actor.transform_timer = 0
+    actor.transform_stats_backup = None
+    return True
 
 
 def is_adjacent(a: tuple[int, int], b: tuple[int, int]) -> bool:

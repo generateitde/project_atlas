@@ -196,6 +196,8 @@ class GridEnv(gym.Env):
 
         _apply_vertical_motion(self.world, atlas)
         _apply_vertical_motion(self.world, self.world.human)
+        atlas_transform_ended = rules.tick_transform(atlas)
+        human_transform_ended = rules.tick_transform(self.world.human)
 
         mode_reward, mode_events, done, info = self.mode.step(self.world, events, self.rng)
         all_events = events + mode_events
@@ -207,6 +209,14 @@ class GridEnv(gym.Env):
             info = {}
         info["reward_terms"] = reward_terms
         info["progression"] = progression
+        info["transform"] = {
+            "atlas_state": atlas.transform_state,
+            "atlas_timer": int(atlas.transform_timer),
+            "atlas_ended": bool(atlas_transform_ended),
+            "human_state": self.world.human.transform_state,
+            "human_timer": int(self.world.human.transform_timer),
+            "human_ended": bool(human_transform_ended),
+        }
         self._steps += 1
         if self._steps >= self.config.world.max_episode_steps:
             done = True

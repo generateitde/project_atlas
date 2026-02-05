@@ -80,6 +80,8 @@ class Character:
     level: int = 1
     exp: int = 0
     transform_state: Optional[str] = None
+    transform_timer: int = 0
+    transform_stats_backup: Optional[dict[str, float]] = None
     jump_remaining: int = 0
     jump_cooldown: int = 0
     grounded: bool = False

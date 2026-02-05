@@ -91,7 +91,7 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T5.2 Transformations
+NEXT TASK: T5.3 Fly Items + Floating Islands
 
 ### Next Items
 - [x] T1.1 Reward Breakdown + Debug Overlay
@@ -105,7 +105,7 @@ NEXT TASK: T5.2 Transformations
 - [x] T4.1 Goal Stack + Subgoals
 - [x] T4.2 Stuck Detector + Uncertainty Gate für ask_human
 - [x] T5.1 EXP/Level Persistenz + Gates
-- [ ] T5.2 Transformations
+- [x] T5.2 Transformations
 - [ ] T5.3 Fly Items + Floating Islands
 - [ ] T6.1 Behavior Cloning Aux Loss richtig
 - [ ] T6.2 DAgger Queries + UI
