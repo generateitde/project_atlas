@@ -37,7 +37,7 @@ class AtlasGame:
         self.show_debug_hud = False
         self.last_action_name = "None"
         self.last_reward_terms: dict[str, float] = {}
-        self.subgoal_text = ""
+        self.subgoal_text = "explore"
         self.renderer = None
         self.keyboard = KeyboardController(self.env.world, self.config.controls)
         self.trainer = AtlasTrainer(self.config, Path("checkpoints"))
@@ -105,6 +105,7 @@ class AtlasGame:
 
         running = True
         obs, _ = self.env.reset()
+        self.subgoal_text = self.trainer.update_goals(self.env.mode.name, self.env.mode.info())
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -182,6 +183,7 @@ class AtlasGame:
                 obs, reward, done, _, info = self.env.step(int(action))
                 self.last_action_name = encoding.ACTION_MEANINGS.get(int(action), f"Action {int(action)}")
                 self.last_reward_terms = info.get("reward_terms", {})
+                self.subgoal_text = self.trainer.update_goals(self.env.mode.name, self.env.mode.info())
                 self.db.log_step(obs, int(action), float(reward), bool(done), info, self.last_reward_terms)
                 self.episode_start = done
                 if done:
