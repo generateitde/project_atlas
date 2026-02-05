@@ -22,3 +22,14 @@ def move_character(character: Character, dx: float, dy: float) -> None:
 
 def is_passable(tile) -> bool:
     return TILE_PROPS[tile].passable
+
+
+def is_adjacent(a: tuple[int, int], b: tuple[int, int]) -> bool:
+    return abs(a[0] - b[0]) + abs(a[1] - b[1]) == 1
+
+
+def find_item_by_id(items: list, item_id: str):
+    for item in items:
+        if getattr(item, "item_id", None) == item_id:
+            return item
+    return None

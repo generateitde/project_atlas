@@ -136,21 +136,28 @@ class GridEnv(gym.Env):
         events: list[Event] = []
         atlas = self.world.atlas
         if action == 2:
-            move(self.world, atlas.entity_id, "E")
+            result = move(self.world, atlas.entity_id, "E")
+            events.extend(result.events)
         elif action == 4:
-            move(self.world, atlas.entity_id, "W")
+            result = move(self.world, atlas.entity_id, "W")
+            events.extend(result.events)
         elif action == 5:
-            jump(self.world, atlas.entity_id)
+            result = jump(self.world, atlas.entity_id)
+            events.extend(result.events)
         elif action == 10:
             dx, dy = encoding.facing_to_dir(atlas.facing)
-            break_tile(self.world, atlas.entity_id, int(atlas.pos.x + dx), int(atlas.pos.y + dy))
+            result = break_tile(self.world, atlas.entity_id, int(atlas.pos.x + dx), int(atlas.pos.y + dy))
+            events.extend(result.events)
         elif action == 11:
             dx, dy = encoding.facing_to_dir(atlas.facing)
-            inspect(self.world, atlas.entity_id, int(atlas.pos.x + dx), int(atlas.pos.y + dy))
+            result = inspect(self.world, atlas.entity_id, int(atlas.pos.x + dx), int(atlas.pos.y + dy))
+            events.extend(result.events)
         elif action == 12:
-            speak(self.world, "Atlas (Plan): Weiter erkunden.")
+            result = speak(self.world, "Atlas (Plan): Weiter erkunden.")
+            events.extend(result.events)
         elif action == 13:
-            ask_human(self.world, "Was soll ich als Nächstes tun?")
+            result = ask_human(self.world, "Was soll ich als Nächstes tun?")
+            events.extend(result.events)
 
         _apply_vertical_motion(self.world, atlas)
         _apply_vertical_motion(self.world, self.world.human)

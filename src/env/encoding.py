@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from src.core.types import Facing
+from src.env import tools
 
 ACTION_MEANINGS = {
     0: "NOOP",
@@ -28,13 +29,18 @@ def action_mask_for(world, actor) -> np.ndarray:
     mask = np.ones(ACTION_COUNT, dtype=bool)
     if actor is None:
         return mask
-    # minimal masking: always allow move/jump, gate others if no item
-    mask[1] = False
-    mask[3] = False
-    has_item = world.hand_item is not None
-    if not has_item:
-        mask[7] = False
-        mask[8] = False
+    actor_id = actor.entity_id
+    mask[1] = tools.precheck_move(world, actor_id, "N").ok
+    mask[2] = tools.precheck_move(world, actor_id, "E").ok
+    mask[3] = tools.precheck_move(world, actor_id, "S").ok
+    mask[4] = tools.precheck_move(world, actor_id, "W").ok
+    mask[5] = tools.precheck_jump(world, actor_id).ok
+    mask[6] = tools.precheck_pickup_adjacent(world, actor_id).ok
+    mask[7] = tools.precheck_drop_hand(world, actor_id).ok
+    mask[8] = tools.precheck_use_adjacent(world, actor_id).ok
+    mask[9] = tools.precheck_attack_adjacent(world, actor_id).ok
+    mask[10] = tools.precheck_break_adjacent(world, actor_id).ok
+    mask[11] = tools.precheck_inspect_adjacent(world, actor_id).ok
     return mask
 
 
