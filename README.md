@@ -10,6 +10,13 @@ Atlas is a 2D pixel grid RL laboratory featuring a human player and an RL agent 
 - SQLite logging + JSONL replay export.
 - Runs without sprite assets (fallback rectangles).
 
+
+## Repository Layout
+- Active code: `src/`
+- Active configs: `configs/`
+- Tests: `tests/`
+- Archived duplicate tree (reference only): `archive/project/`
+
 ## Install
 
 ### Conda (recommended)
