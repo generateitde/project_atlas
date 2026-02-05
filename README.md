@@ -91,7 +91,7 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T6.3 Preference Reward Model
+NEXT TASK: T7.1 Extend Roadmap (new Epic planning)
 
 ### Next Items
 - [x] T1.1 Reward Breakdown + Debug Overlay
@@ -111,7 +111,8 @@ NEXT TASK: T6.3 Preference Reward Model
 - [x] T6.2 DAgger Queries + UI
 
 ### Backlog
-- [ ] T6.3 Preference Reward Model
+- [ ] T7.1 Extend Roadmap (new Epic planning)
+- [x] T6.3 Preference Reward Model
 
 ## EPIC 1: Observability & Determinism
 ### T1.1 Reward Breakdown + Debug Overlay
@@ -294,3 +295,14 @@ NEXT TASK: T6.3 Preference Reward Model
 - **Akzeptanztests:**
   - Hypothesenqualität steigt, Halluzination sinkt.
 - **Done Definition:** Preference ok.
+
+
+## EPIC 7: Continuous Delivery
+### T7.1 Extend Roadmap (new Epic planning)
+- **Problem:** Alle initialen Tasks sind abgeschlossen; es fehlt ein definierter nächster Arbeitsschritt.
+- **Scope:** README.md
+- **Deliverables:**
+  - Nächste Epic(s) und Tasks definieren
+- **Akzeptanztests:**
+  - README enthält neue offene Tasks mit NEXT TASK Marker.
+- **Done Definition:** Fortlaufende Roadmap wieder vollständig planbar.

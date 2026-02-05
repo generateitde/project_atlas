@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from src.logging.schema import Base, Episode, Event, HumanAction, Step
+from src.logging.schema import Base, Episode, Event, HumanAction, HumanFeedback, Step
 
 
 class DBLogger:
@@ -63,6 +63,30 @@ class DBLogger:
                 payload_json=json.dumps(payload, default=str),
             )
             session.add(event)
+            session.commit()
+
+
+    def log_human_feedback(
+        self,
+        target: str,
+        msg_type: str,
+        score: int,
+        correction_text: str,
+        state_features: list[float] | None = None,
+    ) -> None:
+        if self.episode_id is None:
+            return
+        with Session(self.engine) as session:
+            row = HumanFeedback(
+                episode_id=self.episode_id,
+                tick=self.tick,
+                target=target,
+                msg_type=msg_type,
+                score=int(score),
+                correction_text=correction_text,
+                state_features_json=json.dumps(state_features or []),
+            )
+            session.add(row)
             session.commit()
 
     def log_human_action(self, obs: dict[str, Any], action: int) -> None:

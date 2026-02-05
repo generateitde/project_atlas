@@ -5,11 +5,15 @@ from src.core.events import Event
 RewardBreakdown = dict[str, float]
 
 
-def compute_reward(mode_reward: float, events: list[Event], step_cost: float = 0.01) -> tuple[float, RewardBreakdown]:
+def compute_reward(
+    mode_reward: float,
+    events: list[Event],
+    step_cost: float = 0.01,
+    preference_reward: float = 0.0,
+) -> tuple[float, RewardBreakdown]:
     progress_reward = 0.0
     exploration_reward = 0.0
     shaping = 0.0
-    preference_reward = 0.0
     for event in events:
         if event.type == "tile_broken":
             progress_reward += 0.1

@@ -167,7 +167,7 @@ class GridEnv(gym.Env):
         self.mode = create_mode(name, params)
         self.mode.reset(self.world, self.rng)
 
-    def step(self, action: int):
+    def step(self, action: int, preference_reward: float = 0.0):
         events: list[Event] = []
         atlas = self.world.atlas
         if action == 2:
@@ -203,7 +203,7 @@ class GridEnv(gym.Env):
 
         mode_reward, mode_events, done, info = self.mode.step(self.world, events, self.rng)
         all_events = events + mode_events
-        reward, reward_terms = compute_reward(mode_reward, all_events)
+        reward, reward_terms = compute_reward(mode_reward, all_events, preference_reward=preference_reward)
         exp_from_objectives = rules.objective_exp_from(mode_reward, all_events)
         progression = rules.grant_exp(atlas, exp_from_objectives) if exp_from_objectives > 0 else {"exp_gained": 0, "levels_gained": 0, "level": atlas.level, "exp": atlas.exp}
         reward_terms["exp_gain"] = float(progression["exp_gained"])

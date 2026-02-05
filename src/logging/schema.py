@@ -67,3 +67,4 @@ class HumanFeedback(Base):
     msg_type = Column(String(64))
     score = Column(Integer)
     correction_text = Column(Text)
+    state_features_json = Column(Text)
