@@ -20,6 +20,7 @@ from src.logging.db import DBLogger, write_eval_trend_report
 from src.logging.replay import export_steps
 from src.render.renderer import Renderer
 from src.eval.harness import DeterministicEvalHarness
+from src.runtime.inference import export_policy_artifact, load_runtime_policy
 
 
 class AtlasGame:
@@ -387,6 +388,27 @@ def export_replay(db_path: Path, out_path: Path) -> None:
 
 
 
+
+def run_policy_export(config_path: Path | None, checkpoint: Path, out_dir: Path) -> None:
+    config = load_config(config_path)
+    env = GridEnv(config)
+    manifest_path = export_policy_artifact(checkpoint, env, out_dir)
+    print(f"Policy artifact exported: {manifest_path}")
+
+
+def run_inference(config_path: Path | None, artifact_dir: Path, steps: int = 100) -> None:
+    config = load_config(config_path)
+    env = GridEnv(config)
+    runtime = load_runtime_policy(artifact_dir, env)
+    obs, _ = env.reset(seed=config.training.seed)
+    for _ in range(steps):
+        action = runtime.predict(obs, deterministic=True)
+        obs, _reward, done, _truncated, _info = env.step(action)
+        if done:
+            runtime.mark_episode_done()
+            obs, _ = env.reset(seed=config.training.seed)
+    print(f"Inference run completed for {steps} steps.")
+
 def run_eval(config_path: Path | None, checkpoint_paths: list[Path] | None = None) -> None:
     config = load_config(config_path)
     checkpoints = checkpoint_paths or [Path("checkpoints/atlas_model.zip")]
@@ -427,6 +449,14 @@ def main() -> None:
     eval_cmd = subparsers.add_parser("eval")
     eval_cmd.add_argument("--checkpoints", nargs="*", type=Path, default=None)
 
+    export_policy_cmd = subparsers.add_parser("export-policy")
+    export_policy_cmd.add_argument("--checkpoint", type=Path, default=Path("checkpoints/atlas_model.zip"))
+    export_policy_cmd.add_argument("--out-dir", type=Path, default=Path("runtime_artifacts/latest"))
+
+    infer_cmd = subparsers.add_parser("infer")
+    infer_cmd.add_argument("--artifact-dir", type=Path, default=Path("runtime_artifacts/latest"))
+    infer_cmd.add_argument("--steps", type=int, default=100)
+
     args = parser.parse_args()
     if args.command == "train":
         train_headless(args.config, args.steps)
@@ -436,6 +466,10 @@ def main() -> None:
         export_replay(args.db, args.out)
     elif args.command == "eval":
         run_eval(args.config, args.checkpoints)
+    elif args.command == "export-policy":
+        run_policy_export(args.config, args.checkpoint, args.out_dir)
+    elif args.command == "infer":
+        run_inference(args.config, args.artifact_dir, args.steps)
     else:
         AtlasGame(args.config).run()
 

@@ -91,14 +91,14 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T8.3 Policy Export + Runtime Inference Mode
+NEXT TASK: T9.1 Multi-Mode Replay Buffer + Sampling Strategy
 
 ### Next Items
 - [x] T6.3 Preference Reward Model
 - [x] T7.1 Extend Roadmap (new Epic planning)
 - [x] T8.1 Curriculum Pipeline v1 (automated stage progression)
 - [x] T8.2 Deterministic Evaluation Harness + Trend Reports
-- [ ] T8.3 Policy Export + Runtime Inference Mode
+- [x] T8.3 Policy Export + Runtime Inference Mode
 - [ ] T9.1 Multi-Mode Replay Buffer + Sampling Strategy
 - [ ] T9.2 Offline RL Fine-Tuning (CQL/IQL baseline)
 - [ ] T9.3 Safety Guardrails for Tool Usage in Policy Loop
@@ -330,9 +330,11 @@ NEXT TASK: T8.3 Policy Export + Runtime Inference Mode
   - Runtime-Inference-Modus ohne Trainingsabhängigkeiten
   - Kompatibilitätscheck zwischen Environment-Observation-Schema und Export
 - **Akzeptanztests:**
-  - Export + Reload + Inference über 100 Steps ohne Crash.
-  - Schema-Mismatch bricht mit klarer Fehlermeldung ab.
+  - ✅ `python -m src.main export-policy --checkpoint checkpoints/atlas_model.zip --out-dir runtime_artifacts/latest` erzeugt Manifest + Artefakt.
+  - ✅ `python -m src.main infer --artifact-dir runtime_artifacts/latest --steps 100` läuft 100 Steps ohne Crash.
+  - ✅ Schema-Mismatch bricht mit klarer Fehlermeldung ab (abgedeckt durch `tests/test_runtime_inference.py`).
 - **Done Definition:** Policy kann reproduzierbar exportiert und inferiert werden.
+- **Status:** DONE
 
 ## EPIC 9: Data-Centric RL & Safety
 ### T9.1 Multi-Mode Replay Buffer + Sampling Strategy
