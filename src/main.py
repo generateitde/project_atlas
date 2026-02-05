@@ -54,6 +54,23 @@ class AtlasGame:
         self.last_stuck_state = False
         self.last_uncertainty = 0.0
 
+    @staticmethod
+    def _key_to_action(key: int) -> int | None:
+        mapping = {
+            pygame.K_w: 1,
+            pygame.K_UP: 1,
+            pygame.K_d: 2,
+            pygame.K_RIGHT: 2,
+            pygame.K_s: 3,
+            pygame.K_DOWN: 3,
+            pygame.K_a: 4,
+            pygame.K_LEFT: 4,
+            pygame.K_SPACE: 5,
+            pygame.K_b: 10,
+            pygame.K_i: 11,
+        }
+        return mapping.get(key)
+
     def switch_world(self, preset: str, seed: int) -> None:
         progression = self.trainer.snapshot_progression(self.env.world.atlas)
         self.env.preset = preset
@@ -168,6 +185,12 @@ class AtlasGame:
                         else:
                             self.chat_buffer += event.unicode
                     else:
+                        if self.keyboard.target_id == "ai_atlas":
+                            action = self._key_to_action(event.key)
+                            if action is not None:
+                                demo_obs = self.env._obs()
+                                self.db.log_human_action(demo_obs, action)
+                                self.trainer.record_human_action(demo_obs, action)
                         self.keyboard.handle_event(event)
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if self.console.active:
