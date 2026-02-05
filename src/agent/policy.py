@@ -5,8 +5,10 @@ import json
 from typing import Any
 
 import gymnasium as gym
+import numpy as np
 from sb3_contrib import RecurrentPPO
 
+from src.agent.action_masking import apply_action_mask
 from src.config import AtlasConfig
 
 
@@ -70,3 +72,8 @@ def observation_schema_signature(observation_space: gym.Space) -> dict[str, Any]
 def schema_hash(schema: dict[str, Any]) -> str:
     encoded = json.dumps(schema, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def choose_masked_action(logits: np.ndarray, mask: np.ndarray) -> int:
+    masked_logits = apply_action_mask(np.asarray(logits), np.asarray(mask, dtype=bool))
+    return int(np.argmax(masked_logits))

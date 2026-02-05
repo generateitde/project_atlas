@@ -16,6 +16,77 @@ class ToolResult:
     error_code: str | None = None
 
 
+@dataclass
+class SafetyGuardrailsConfig:
+    max_tool_calls_per_window: int = 3
+    window_ticks: int = 5
+    cooldown_by_action: dict[int, int] | None = None
+    forbidden_chains: set[tuple[int, int]] | None = None
+
+    def cooldown_for(self, action_id: int) -> int:
+        if not self.cooldown_by_action:
+            return 0
+        return int(self.cooldown_by_action.get(action_id, 0))
+
+
+@dataclass
+class ToolSafetyTracker:
+    recent_tool_ticks: list[int]
+    cooldown_until: dict[int, int]
+    last_tool_action: int | None = None
+
+
+DEFAULT_TOOL_SAFETY_CONFIG = SafetyGuardrailsConfig(
+    cooldown_by_action={12: 2, 13: 6},
+    forbidden_chains={(13, 13), (12, 13)},
+)
+
+TOOL_ACTION_IDS = frozenset({6, 7, 8, 9, 10, 11, 12, 13})
+
+
+def tool_safety_precheck(
+    action_id: int,
+    *,
+    tick: int,
+    tracker: ToolSafetyTracker,
+    config: SafetyGuardrailsConfig = DEFAULT_TOOL_SAFETY_CONFIG,
+    strict_safety: bool = False,
+) -> ToolResult:
+    if action_id not in TOOL_ACTION_IDS:
+        return _result(True)
+
+    until_tick = int(tracker.cooldown_until.get(action_id, -1))
+    if tick < until_tick:
+        return _result(False, error_code="tool_cooldown")
+
+    if tracker.last_tool_action is not None and config.forbidden_chains:
+        if (tracker.last_tool_action, action_id) in config.forbidden_chains:
+            return _result(False, error_code="forbidden_chain")
+
+    if strict_safety:
+        recent = [recent_tick for recent_tick in tracker.recent_tool_ticks if tick - recent_tick < config.window_ticks]
+        if len(recent) >= config.max_tool_calls_per_window:
+            return _result(False, error_code="rate_limited")
+    return _result(True)
+
+
+def tool_safety_commit(
+    action_id: int,
+    *,
+    tick: int,
+    tracker: ToolSafetyTracker,
+    config: SafetyGuardrailsConfig = DEFAULT_TOOL_SAFETY_CONFIG,
+) -> None:
+    if action_id not in TOOL_ACTION_IDS:
+        return
+    tracker.recent_tool_ticks = [recent_tick for recent_tick in tracker.recent_tool_ticks if tick - recent_tick < config.window_ticks]
+    tracker.recent_tool_ticks.append(tick)
+    tracker.last_tool_action = action_id
+    cooldown = config.cooldown_for(action_id)
+    if cooldown > 0:
+        tracker.cooldown_until[action_id] = tick + cooldown
+
+
 def _result(
     ok: bool,
     *,
