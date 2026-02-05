@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pygame
+from sb3_contrib import RecurrentPPO
 from dotenv import load_dotenv
 
 from src.agent.trainer import AtlasTrainer
@@ -16,7 +17,8 @@ from src.env import encoding
 from src.human.input_keyboard import KeyboardController
 from src.human.chat_ui import format_action_choices, parse_human_action_choice
 from src.agent.preference_reward import extract_state_features, parse_scored_feedback
-from src.logging.db import DBLogger, write_eval_trend_report
+from src.agent.offline_rl import load_offline_transitions
+from src.logging.db import DBLogger, write_eval_trend_report, write_offline_comparison_report
 from src.logging.replay import export_steps
 from src.render.renderer import Renderer
 from src.eval.harness import DeterministicEvalHarness
@@ -419,6 +421,62 @@ def run_inference(config_path: Path | None, artifact_dir: Path, steps: int = 100
             obs, _ = env.reset(seed=config.training.seed)
     print(f"Inference run completed for {steps} steps.")
 
+def run_offline_finetune(
+    config_path: Path | None,
+    data_path: Path,
+    steps: int,
+    algorithm: str,
+    checkpoint: Path | None = None,
+) -> None:
+    config = load_config(config_path)
+    env = GridEnv(config)
+    trainer = AtlasTrainer(config, Path("checkpoints"))
+    trainer.load(env)
+    if checkpoint is not None and checkpoint.exists():
+        trainer.model = RecurrentPPO.load(checkpoint, env=env)
+    transitions = load_offline_transitions(data_path)
+    if not transitions:
+        raise RuntimeError(f"No offline transitions found in {data_path}")
+
+    harness = DeterministicEvalHarness(config, Path("checkpoints"))
+    mode_matrix = [("ExitGame", {}), ("CaptureTheFlag", {}), ("HideAndSeek", {"hide_target": (2, 2), "time_limit_steps": 120})]
+    seeds = [11, 23, 37, 49, 61]
+    baseline_report = harness.evaluate(checkpoints=[Path("checkpoints/atlas_model.zip")], seeds=seeds, mode_matrix=mode_matrix)
+
+    trainer.offline_fine_tune(
+        online_env=env,
+        transitions=transitions,
+        total_steps=steps,
+        algorithm=algorithm,
+    )
+    trainer.save()
+
+    tuned_checkpoint = Path("checkpoints/atlas_model.zip")
+    tuned_report = harness.evaluate(checkpoints=[tuned_checkpoint], seeds=seeds, mode_matrix=mode_matrix)
+
+    baseline_rows = {row["mode"]: row for row in baseline_report.get("rows", [])}
+    tuned_rows = {row["mode"]: row for row in tuned_report.get("rows", [])}
+    comparison_rows = []
+    for mode in sorted(set(baseline_rows) | set(tuned_rows)):
+        base = baseline_rows.get(mode, {})
+        tuned = tuned_rows.get(mode, {})
+        comparison_rows.append(
+            {
+                "mode": mode,
+                "baseline_success_rate": float(base.get("success_rate", 0.0)),
+                "offline_success_rate": float(tuned.get("success_rate", 0.0)),
+                "delta_success_rate": float(tuned.get("success_rate", 0.0) - base.get("success_rate", 0.0)),
+                "baseline_avg_return": float(base.get("avg_return", 0.0)),
+                "offline_avg_return": float(tuned.get("avg_return", 0.0)),
+                "delta_avg_return": float(tuned.get("avg_return", 0.0) - base.get("avg_return", 0.0)),
+            }
+        )
+
+    report_path = Path("reports/offline_vs_online.json")
+    write_offline_comparison_report(comparison_rows, report_path)
+    print(f"Offline fine-tuning complete with {len(transitions)} transitions. Report: {report_path}")
+
+
 def run_eval(config_path: Path | None, checkpoint_paths: list[Path] | None = None) -> None:
     config = load_config(config_path)
     checkpoints = checkpoint_paths or [Path("checkpoints/atlas_model.zip")]
@@ -467,6 +525,12 @@ def main() -> None:
     infer_cmd.add_argument("--artifact-dir", type=Path, default=Path("runtime_artifacts/latest"))
     infer_cmd.add_argument("--steps", type=int, default=100)
 
+    offline_cmd = subparsers.add_parser("offline-finetune")
+    offline_cmd.add_argument("--data", type=Path, default=Path("atlas.db"))
+    offline_cmd.add_argument("--steps", type=int, default=10000)
+    offline_cmd.add_argument("--algorithm", type=str, choices=["iql", "cql"], default="iql")
+    offline_cmd.add_argument("--checkpoint", type=Path, default=None)
+
     args = parser.parse_args()
     if args.command == "train":
         train_headless(args.config, args.steps)
@@ -480,6 +544,8 @@ def main() -> None:
         run_policy_export(args.config, args.checkpoint, args.out_dir)
     elif args.command == "infer":
         run_inference(args.config, args.artifact_dir, args.steps)
+    elif args.command == "offline-finetune":
+        run_offline_finetune(args.config, args.data, args.steps, args.algorithm, args.checkpoint)
     else:
         AtlasGame(args.config).run()
 
