@@ -17,9 +17,26 @@ class DBLogger:
         self.episode_id: int | None = None
         self.tick = 0
 
-    def start_episode(self, preset: str, seed: int, mode: str, started_at: str, world_hash: str | None = None) -> None:
+    def start_episode(
+        self,
+        preset: str,
+        seed: int,
+        mode: str,
+        started_at: str,
+        world_hash: str | None = None,
+        curriculum_stage: str | None = None,
+        stage_transition_reason: str | None = None,
+    ) -> None:
         with Session(self.engine) as session:
-            episode = Episode(preset=preset, seed=seed, mode=mode, started_at=started_at, world_hash=world_hash)
+            episode = Episode(
+                preset=preset,
+                seed=seed,
+                mode=mode,
+                started_at=started_at,
+                world_hash=world_hash,
+                curriculum_stage=curriculum_stage,
+                stage_transition_reason=stage_transition_reason,
+            )
             session.add(episode)
             session.commit()
             self.episode_id = episode.id

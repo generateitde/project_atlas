@@ -44,6 +44,17 @@ class TrainingArenaState(ModeState):
     pass
 
 
+@dataclass(frozen=True)
+class CurriculumStage:
+    name: str
+    preset: str
+    mode: str
+    mode_params: dict[str, Any]
+    min_episodes: int = 5
+    min_success_rate: float = 0.6
+    min_avg_return: float = 1.0
+
+
 class Mode:
     name: str = "Base"
     state: ModeState | None = None
@@ -257,3 +268,45 @@ def create_mode(name: str, params: dict[str, Any] | None = None) -> Mode:
     params = params or {}
     mode_cls = MODE_REGISTRY.get(name, FreeExplore)
     return mode_cls(**params)
+
+
+def default_curriculum_stages() -> list[CurriculumStage]:
+    return [
+        CurriculumStage(
+            name="exit_basic",
+            preset="dungeon_exit",
+            mode="ExitGame",
+            mode_params={},
+            min_episodes=4,
+            min_success_rate=0.5,
+            min_avg_return=2.0,
+        ),
+        CurriculumStage(
+            name="exit_hazards",
+            preset="floating_islands",
+            mode="ExitGame",
+            mode_params={},
+            min_episodes=5,
+            min_success_rate=0.5,
+            min_avg_return=2.5,
+        ),
+        CurriculumStage(
+            name="ctf_basic",
+            preset="ctf_small",
+            mode="CaptureTheFlag",
+            mode_params={},
+            min_episodes=6,
+            min_success_rate=0.45,
+            min_avg_return=1.5,
+        ),
+    ]
+
+
+def mode_success(mode_name: str, mode_info: dict[str, Any]) -> bool:
+    if mode_name == "ExitGame":
+        return bool(mode_info.get("goal_reached"))
+    if mode_name == "CaptureTheFlag":
+        return bool(mode_info.get("score", 0) > 0)
+    if mode_name == "HideAndSeek":
+        return bool(mode_info.get("done")) and "Target found" in str(mode_info.get("status", ""))
+    return bool(mode_info.get("done"))
