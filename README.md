@@ -91,7 +91,7 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T9.3 Safety Guardrails for Tool Usage in Policy Loop
+NEXT TASK: T1.2 Seed Repro & World Snapshot
 
 ### Next Items
 - [x] T6.3 Preference Reward Model
@@ -101,7 +101,7 @@ NEXT TASK: T9.3 Safety Guardrails for Tool Usage in Policy Loop
 - [x] T8.3 Policy Export + Runtime Inference Mode
 - [x] T9.1 Multi-Mode Replay Buffer + Sampling Strategy
 - [x] T9.2 Offline RL Fine-Tuning (CQL/IQL baseline)
-- [ ] T9.3 Safety Guardrails for Tool Usage in Policy Loop
+- [x] T9.3 Safety Guardrails for Tool Usage in Policy Loop
 
 ## EPIC 1: Observability & Determinism
 ### T1.1 Reward Breakdown + Debug Overlay
@@ -382,3 +382,7 @@ NEXT TASK: T9.3 Safety Guardrails for Tool Usage in Policy Loop
   - Stress-Test: Tool-Spam wird begrenzt, invalid chain rate sinkt signifikant.
   - Logs enthalten verständliche Rejection-Codes.
 - **Done Definition:** Tool-Nutzung ist robust begrenzt und nachvollziehbar.
+- **Akzeptanztests (implementiert):**
+  - ✅ `PYTHONPATH=. pytest -q tests/test_tool_safety_guardrails.py` validiert forbidden-chain Rejections, Penalty und Strict-Safety Masking.
+  - ✅ `PYTHONPATH=. pytest -q tests/test_chat_ui_actions.py tests/test_imitation_bc.py` Regression-Check für action-mask-bezogene Flows.
+- **Status:** DONE

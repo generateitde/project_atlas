@@ -25,7 +25,7 @@ ACTION_MEANINGS = {
 ACTION_COUNT = len(ACTION_MEANINGS)
 
 
-def action_mask_for(world, actor) -> np.ndarray:
+def action_mask_for(world, actor, tool_safety=None, tick: int = 0, strict_safety: bool = False) -> np.ndarray:
     mask = np.ones(ACTION_COUNT, dtype=bool)
     if actor is None:
         return mask
@@ -41,6 +41,17 @@ def action_mask_for(world, actor) -> np.ndarray:
     mask[9] = tools.precheck_attack_adjacent(world, actor_id).ok
     mask[10] = tools.precheck_break_adjacent(world, actor_id).ok
     mask[11] = tools.precheck_inspect_adjacent(world, actor_id).ok
+    if tool_safety is not None:
+        for action_id in tools.TOOL_ACTION_IDS:
+            if action_id >= ACTION_COUNT:
+                continue
+            safety = tools.tool_safety_precheck(
+                action_id,
+                tick=tick,
+                tracker=tool_safety,
+                strict_safety=strict_safety,
+            )
+            mask[action_id] = bool(mask[action_id] and safety.ok)
     return mask
 
 

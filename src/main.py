@@ -26,9 +26,9 @@ from src.runtime.inference import export_policy_artifact, load_runtime_policy
 
 
 class AtlasGame:
-    def __init__(self, config_path: Path | None = None) -> None:
+    def __init__(self, config_path: Path | None = None, strict_safety: bool = False) -> None:
         self.config = load_config(config_path)
-        self.env = GridEnv(self.config)
+        self.env = GridEnv(self.config, strict_safety=strict_safety)
         self.console = Console()
         self.chat_active = False
         self.chat_buffer = ""
@@ -499,6 +499,7 @@ def main() -> None:
     load_dotenv()
     parser = argparse.ArgumentParser(description="Atlas RL Grid")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
+    parser.add_argument("--strict-safety", action="store_true", help="Enable strict tool safety guardrails.")
     subparsers = parser.add_subparsers(dest="command")
 
     run_cmd = subparsers.add_parser("run")
@@ -547,7 +548,7 @@ def main() -> None:
     elif args.command == "offline-finetune":
         run_offline_finetune(args.config, args.data, args.steps, args.algorithm, args.checkpoint)
     else:
-        AtlasGame(args.config).run()
+        AtlasGame(args.config, strict_safety=bool(args.strict_safety)).run()
 
 
 if __name__ == "__main__":

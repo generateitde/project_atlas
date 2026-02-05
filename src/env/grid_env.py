@@ -14,7 +14,18 @@ from src.env import encoding
 from src.env.modes import Mode, create_mode
 from src.env.rewards import compute_reward
 from src.env import rules
-from src.env.tools import ask_human, break_tile, inspect, jump, move, speak
+from src.env.tools import (
+    DEFAULT_TOOL_SAFETY_CONFIG,
+    ToolSafetyTracker,
+    ask_human,
+    break_tile,
+    inspect,
+    jump,
+    move,
+    speak,
+    tool_safety_commit,
+    tool_safety_precheck,
+)
 from src.env.world_gen import default_spawn, generate_world, world_snapshot_hash
 
 
@@ -118,7 +129,7 @@ class World:
 class GridEnv(gym.Env):
     metadata = {"render_modes": ["human"], "render_fps": 30}
 
-    def __init__(self, config: AtlasConfig, preset: str = "floating_islands", seed: int | None = None):
+    def __init__(self, config: AtlasConfig, preset: str = "floating_islands", seed: int | None = None, strict_safety: bool = False):
         super().__init__()
         self.config = config
         self.preset = preset
@@ -126,6 +137,8 @@ class GridEnv(gym.Env):
         self.rng = RNG(self.seed_value)
         self.mode: Mode = create_mode("ExitGame")
         self.world_hash = ""
+        self.strict_safety = bool(strict_safety)
+        self.tool_safety = ToolSafetyTracker(recent_tool_ticks=[], cooldown_until={})
         self.world = self._build_world()
         radius = config.world.visibility_radius
         tile_shape = (2 * radius + 1, 2 * radius + 1)
@@ -158,6 +171,7 @@ class GridEnv(gym.Env):
         if seed is not None:
             self.seed_value = seed
         self.rng = RNG(self.seed_value)
+        self.tool_safety = ToolSafetyTracker(recent_tool_ticks=[], cooldown_until={})
         self.world = self._build_world()
         self._steps = 0
         self.mode.reset(self.world, self.rng)
@@ -170,29 +184,51 @@ class GridEnv(gym.Env):
     def step(self, action: int, preference_reward: float = 0.0):
         events: list[Event] = []
         atlas = self.world.atlas
-        if action == 2:
-            result = move(self.world, atlas.entity_id, "E")
-            events.extend(result.events)
-        elif action == 4:
-            result = move(self.world, atlas.entity_id, "W")
-            events.extend(result.events)
-        elif action == 5:
-            result = jump(self.world, atlas.entity_id)
-            events.extend(result.events)
-        elif action == 10:
-            dx, dy = encoding.facing_to_dir(atlas.facing)
-            result = break_tile(self.world, atlas.entity_id, int(atlas.pos.x + dx), int(atlas.pos.y + dy))
-            events.extend(result.events)
-        elif action == 11:
-            dx, dy = encoding.facing_to_dir(atlas.facing)
-            result = inspect(self.world, atlas.entity_id, int(atlas.pos.x + dx), int(atlas.pos.y + dy))
-            events.extend(result.events)
-        elif action == 12:
-            result = speak(self.world, "Atlas (Plan): Weiter erkunden.")
-            events.extend(result.events)
-        elif action == 13:
-            result = ask_human(self.world, "Was soll ich als Nächstes tun?")
-            events.extend(result.events)
+        tool_rejection_code: str | None = None
+        rejected_tool_action = False
+        penalty = 0.0
+
+        safety_result = tool_safety_precheck(
+            int(action),
+            tick=self._steps,
+            tracker=self.tool_safety,
+            config=DEFAULT_TOOL_SAFETY_CONFIG,
+            strict_safety=self.strict_safety,
+        )
+        if safety_result.ok:
+            if action == 2:
+                result = move(self.world, atlas.entity_id, "E")
+                events.extend(result.events)
+            elif action == 4:
+                result = move(self.world, atlas.entity_id, "W")
+                events.extend(result.events)
+            elif action == 5:
+                result = jump(self.world, atlas.entity_id)
+                events.extend(result.events)
+            elif action == 10:
+                dx, dy = encoding.facing_to_dir(atlas.facing)
+                result = break_tile(self.world, atlas.entity_id, int(atlas.pos.x + dx), int(atlas.pos.y + dy))
+                events.extend(result.events)
+            elif action == 11:
+                dx, dy = encoding.facing_to_dir(atlas.facing)
+                result = inspect(self.world, atlas.entity_id, int(atlas.pos.x + dx), int(atlas.pos.y + dy))
+                events.extend(result.events)
+            elif action == 12:
+                result = speak(self.world, "Atlas (Plan): Weiter erkunden.")
+                events.extend(result.events)
+            elif action == 13:
+                result = ask_human(self.world, "Was soll ich als Nächstes tun?")
+                events.extend(result.events)
+            tool_safety_commit(
+                int(action),
+                tick=self._steps,
+                tracker=self.tool_safety,
+                config=DEFAULT_TOOL_SAFETY_CONFIG,
+            )
+        else:
+            rejected_tool_action = True
+            tool_rejection_code = safety_result.error_code
+            penalty = -0.05
 
         _apply_vertical_motion(self.world, atlas)
         _apply_vertical_motion(self.world, self.world.human)
@@ -204,12 +240,20 @@ class GridEnv(gym.Env):
         mode_reward, mode_events, done, info = self.mode.step(self.world, events, self.rng)
         all_events = events + mode_events
         reward, reward_terms = compute_reward(mode_reward, all_events, preference_reward=preference_reward)
+        if rejected_tool_action:
+            reward += penalty
+            reward_terms["safety_penalty"] = float(penalty)
         exp_from_objectives = rules.objective_exp_from(mode_reward, all_events)
         progression = rules.grant_exp(atlas, exp_from_objectives) if exp_from_objectives > 0 else {"exp_gained": 0, "levels_gained": 0, "level": atlas.level, "exp": atlas.exp}
         reward_terms["exp_gain"] = float(progression["exp_gained"])
         if info is None:
             info = {}
         info["reward_terms"] = reward_terms
+        info["tool_safety"] = {
+            "rejected": bool(rejected_tool_action),
+            "rejection_code": tool_rejection_code,
+            "strict": bool(self.strict_safety),
+        }
         info["progression"] = progression
         info["transform"] = {
             "atlas_state": atlas.transform_state,
@@ -248,7 +292,13 @@ class GridEnv(gym.Env):
         hand = np.zeros((4,), dtype=np.float32)
         stats = np.array([atlas.hp, atlas.level, atlas.exp, atlas.speed], dtype=np.float32)
         mode_features = np.array([1.0, 0.0], dtype=np.float32)
-        action_mask = encoding.action_mask_for(self.world, atlas).astype(np.int8)
+        action_mask = encoding.action_mask_for(
+            self.world,
+            atlas,
+            tool_safety=self.tool_safety,
+            tick=self._steps,
+            strict_safety=self.strict_safety,
+        ).astype(np.int8)
         memory_hint = np.array([0.0], dtype=np.float32)
         return {
             "local_tiles": tiles,
