@@ -44,5 +44,5 @@ python -m src.main export --db atlas.db --out replays/atlas.jsonl
 - F9: Load checkpoint
 
 ## Notes
-- Fallback sprites are colored rectangles; TODO for animation swaps.
+- Fallback character sprites are stylized 32x32 silhouettes (human + Atlas), with room for future animation swaps.
 - Use `configs/default.yaml` to configure training/rendering.
