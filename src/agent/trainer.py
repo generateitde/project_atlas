@@ -6,6 +6,7 @@ from pathlib import Path
 from sb3_contrib import RecurrentPPO
 
 from src.agent.dagger import DAgger
+from src.agent.imitation import ImitationBuffer
 from src.agent.policy import build_model
 from src.agent.world_model import GoalManager
 from src.config import AtlasConfig
@@ -18,6 +19,7 @@ class AtlasTrainer:
     model: RecurrentPPO | None = None
     goal_manager: GoalManager = field(default_factory=GoalManager)
     dagger: DAgger = field(default_factory=DAgger)
+    imitation: ImitationBuffer = field(default_factory=ImitationBuffer)
 
     def load(self, env) -> None:
         checkpoint = self.checkpoint_dir / "atlas_model.zip"
@@ -40,7 +42,16 @@ class AtlasTrainer:
     def predict(self, obs, state=None, mask=None):
         if self.model is None:
             raise RuntimeError("Model not initialized")
-        return self.model.predict(obs, state=state, episode_start=mask, deterministic=False)
+        action, next_state = self.model.predict(obs, state=state, episode_start=mask, deterministic=False)
+        try:
+            scalar_action = int(action)
+        except (TypeError, ValueError):
+            return action, next_state
+        guided_action = self.imitation.select_action(obs, scalar_action)
+        return guided_action, next_state
+
+    def record_human_action(self, obs: dict, action: int) -> None:
+        self.imitation.add(obs, int(action))
 
     def reset_dagger(self) -> None:
         self.dagger.reset()

@@ -91,7 +91,7 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T6.1 Behavior Cloning Aux Loss richtig
+NEXT TASK: T6.2 DAgger Queries + UI
 
 ### Next Items
 - [x] T1.1 Reward Breakdown + Debug Overlay
@@ -107,7 +107,7 @@ NEXT TASK: T6.1 Behavior Cloning Aux Loss richtig
 - [x] T5.1 EXP/Level Persistenz + Gates
 - [x] T5.2 Transformations
 - [x] T5.3 Fly Items + Floating Islands
-- [ ] T6.1 Behavior Cloning Aux Loss richtig
+- [x] T6.1 Behavior Cloning Aux Loss richtig
 - [ ] T6.2 DAgger Queries + UI
 
 ### Backlog
