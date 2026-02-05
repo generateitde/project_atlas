@@ -40,8 +40,10 @@ class Renderer:
                 self.sprite_db.draw_tile(surface, tile, x * self.tile_size, y * self.tile_size)
         atlas = world.atlas
         human = world.human
-        self.sprite_db.draw_character(surface, (50, 200, 255), int(atlas.pos.x) * self.tile_size, int(atlas.pos.y) * self.tile_size)
-        self.sprite_db.draw_character(surface, (200, 200, 50), int(human.pos.x) * self.tile_size, int(human.pos.y) * self.tile_size)
+        atlas_color = (180, 80, 220) if atlas.transform_state else (50, 200, 255)
+        human_color = (220, 140, 70) if human.transform_state else (200, 200, 50)
+        self.sprite_db.draw_character(surface, atlas_color, int(atlas.pos.x) * self.tile_size, int(atlas.pos.y) * self.tile_size)
+        self.sprite_db.draw_character(surface, human_color, int(human.pos.x) * self.tile_size, int(human.pos.y) * self.tile_size)
 
         hud_y = self.height * self.tile_size + 4
         offset = self.ui.draw_wrapped_text(surface, f"Mode: {mode_name}", (4, hud_y), max_text_width)
@@ -64,9 +66,12 @@ class Renderer:
                     max_text_width,
                     (200, 200, 200),
                 )
+        atlas_line = f"Atlas HP: {atlas.hp} Lvl: {atlas.level} EXP: {atlas.exp}"
+        if atlas.transform_state:
+            atlas_line += f" | Transform: {atlas.transform_state} ({atlas.transform_timer})"
         offset += self.ui.draw_wrapped_text(
             surface,
-            f"Atlas HP: {atlas.hp} Lvl: {atlas.level} EXP: {atlas.exp}",
+            atlas_line,
             (4, hud_y + offset),
             max_text_width,
         )
