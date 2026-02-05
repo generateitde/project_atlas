@@ -24,6 +24,8 @@ class FreeExploreState(ModeState):
 
 class ExitGameState(ModeState):
     goal_reached: bool = False
+    key_collected: bool = False
+    door_open: bool = False
 
 
 class HideAndSeekState(ModeState):
@@ -72,19 +74,46 @@ class ExitGame(Mode):
     name: str = "ExitGame"
 
     def reset(self, world, rng: RNG) -> ModeState:
-        self.state = ExitGameState(name=self.name, objective="Reach the exit tile.", status="Searching for the exit.")
+        self.state = ExitGameState(
+            name=self.name,
+            objective="Collect key, pass door, reach exit tile.",
+            status="Find the key.",
+        )
         return self.state
 
     def step(self, world, events: list[Event], rng: RNG) -> tuple[float, list[Event], bool, dict[str, Any]]:
         reward = 0.0
         done = False
+        atlas_tile = world.tile_at(world.atlas.pos)
+
+        if atlas_tile == TileType.FLAG and not world.atlas_has_flag:
+            world.atlas_has_flag = True
+            reward += 1.0
+            for y in range(world.tiles.shape[0]):
+                for x in range(world.tiles.shape[1]):
+                    if world.tiles[y, x] == TileType.DOOR_CLOSED:
+                        world.tiles[y, x] = TileType.DOOR_OPEN
+
         if world.tile_at(world.atlas.pos) == TileType.GOAL:
             reward += 10.0
             done = True
         if self.state and isinstance(self.state, ExitGameState):
+            self.state.key_collected = world.atlas_has_flag
+            self.state.door_open = any(
+                world.tiles[y, x] == TileType.DOOR_OPEN
+                for y in range(world.tiles.shape[0])
+                for x in range(world.tiles.shape[1])
+            )
             self.state.goal_reached = done
             self.state.done = done
-            self.state.status = "Exit reached!" if done else "Searching for the exit."
+            if done:
+                self.state.status = "Exit reached!"
+            elif not self.state.key_collected:
+                self.state.status = "Find the key."
+            elif not self.state.door_open:
+                self.state.status = "Open the door."
+            else:
+                self.state.status = "Go to the exit."
         return reward, [], done, self.info()
 
 
