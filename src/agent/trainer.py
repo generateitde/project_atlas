@@ -5,6 +5,7 @@ from pathlib import Path
 
 from sb3_contrib import RecurrentPPO
 
+from src.agent.dagger import DAgger
 from src.agent.policy import build_model
 from src.agent.world_model import GoalManager
 from src.config import AtlasConfig
@@ -16,6 +17,7 @@ class AtlasTrainer:
     checkpoint_dir: Path
     model: RecurrentPPO | None = None
     goal_manager: GoalManager = field(default_factory=GoalManager)
+    dagger: DAgger = field(default_factory=DAgger)
 
     def load(self, env) -> None:
         checkpoint = self.checkpoint_dir / "atlas_model.zip"
@@ -39,6 +41,15 @@ class AtlasTrainer:
         if self.model is None:
             raise RuntimeError("Model not initialized")
         return self.model.predict(obs, state=state, episode_start=mask, deterministic=False)
+
+    def reset_dagger(self) -> None:
+        self.dagger.reset()
+
+    def update_stuck_state(self, position: tuple[int, int], progress_signal: float, done: bool = False) -> bool:
+        return self.dagger.update_stuck_state(position, progress_signal, done)
+
+    def should_query_human(self, *, stuck: bool, uncertainty: float) -> bool:
+        return self.dagger.needs_query(stuck=stuck, uncertainty=uncertainty)
 
     def update_goals(self, mode_name: str, mode_info: dict | None = None) -> str:
         goal_state = self.goal_manager.update(mode_name, mode_info)

@@ -31,7 +31,6 @@ class AtlasGame:
         self.ai_mode = "explore"
         self.waiting_for_response = False
         self.steps_since_question = 0
-        self.question_interval = 120
         self.goal_text = ""
         self.fullscreen = False
         self.show_debug_hud = False
@@ -52,6 +51,8 @@ class AtlasGame:
         )
         self.recurrent_state = None
         self.episode_start = True
+        self.last_stuck_state = False
+        self.last_uncertainty = 0.0
 
     def switch_world(self, preset: str, seed: int) -> None:
         self.env.preset = preset
@@ -63,6 +64,7 @@ class AtlasGame:
         self.env.reset()
         self.keyboard.world = self.env.world
         self.episode_start = True
+        self.trainer.reset_dagger()
 
     def set_seed(self, seed: int) -> None:
         self.config.training.seed = seed
@@ -70,6 +72,7 @@ class AtlasGame:
         self.env.reset(seed=seed)
         self.keyboard.world = self.env.world
         self.episode_start = True
+        self.trainer.reset_dagger()
 
     def save(self) -> None:
         self.trainer.save()
@@ -105,6 +108,7 @@ class AtlasGame:
 
         running = True
         obs, _ = self.env.reset()
+        self.trainer.reset_dagger()
         self.subgoal_text = self.trainer.update_goals(self.env.mode.name, self.env.mode.info())
         while running:
             for event in pygame.event.get():
@@ -171,18 +175,25 @@ class AtlasGame:
                             grid_y = mouse_y // tile_size
                             self.console.last_message = self.env.world.describe_at((grid_x, grid_y))
 
-            if self.ai_mode == "query" and not self.waiting_for_response:
-                self.steps_since_question += 1
-                if self.steps_since_question >= self.question_interval:
-                    self.env.world.messages.append(("Atlas (Frage)", "Was soll ich als Nächstes tun?"))
-                    self.waiting_for_response = True
-                    self.steps_since_question = 0
-
             if not self.ai_paused and not self.waiting_for_response:
                 action, self.recurrent_state = self.trainer.predict(obs, state=self.recurrent_state, mask=self.episode_start)
                 obs, reward, done, _, info = self.env.step(int(action))
                 self.last_action_name = encoding.ACTION_MEANINGS.get(int(action), f"Action {int(action)}")
                 self.last_reward_terms = info.get("reward_terms", {})
+                progress_signal = float(self.last_reward_terms.get("progress", 0.0))
+                atlas_pos = (int(self.env.world.atlas.pos.x), int(self.env.world.atlas.pos.y))
+                self.last_stuck_state = self.trainer.update_stuck_state(atlas_pos, progress_signal, done=bool(done))
+                action_mask = obs.get("action_mask")
+                if action_mask is not None:
+                    valid_actions = int(action_mask.sum())
+                    if valid_actions > 0:
+                        uniform_probs = [1.0 / valid_actions if allowed else 0.0 for allowed in action_mask]
+                        self.last_uncertainty = self.trainer.dagger.entropy_from_probs(uniform_probs)
+                    else:
+                        self.last_uncertainty = 0.0
+                if self.ai_mode == "query" and self.trainer.should_query_human(stuck=self.last_stuck_state, uncertainty=self.last_uncertainty):
+                    self.env.world.messages.append(("Atlas (Frage)", "Was soll ich als Nächstes tun?"))
+                    self.waiting_for_response = True
                 self.subgoal_text = self.trainer.update_goals(self.env.mode.name, self.env.mode.info())
                 self.db.log_step(obs, int(action), float(reward), bool(done), info, self.last_reward_terms)
                 self.episode_start = done
