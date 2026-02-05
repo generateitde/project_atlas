@@ -91,28 +91,17 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T7.1 Extend Roadmap (new Epic planning)
+NEXT TASK: T8.1 Curriculum Pipeline v1 (automated stage progression)
 
 ### Next Items
-- [x] T1.1 Reward Breakdown + Debug Overlay
-- [x] T1.2 Seed Repro & World Snapshot
-- [x] T2.1 Tool Contracts + Validation Layer
-- [x] T2.2 Jump/Gravity State Machine + One-Way Platforms
-- [x] T3.1 Mode Interface Refactor + Mode HUD
-- [x] T3.2 ExitGame Solvable Generator (Baseline)
-- [x] T3.3 CaptureTheFlag Vollständig
-- [x] T3.4 HideAndSeek Vollständig
-- [x] T4.1 Goal Stack + Subgoals
-- [x] T4.2 Stuck Detector + Uncertainty Gate für ask_human
-- [x] T5.1 EXP/Level Persistenz + Gates
-- [x] T5.2 Transformations
-- [x] T5.3 Fly Items + Floating Islands
-- [x] T6.1 Behavior Cloning Aux Loss richtig
-- [x] T6.2 DAgger Queries + UI
-
-### Backlog
-- [ ] T7.1 Extend Roadmap (new Epic planning)
 - [x] T6.3 Preference Reward Model
+- [x] T7.1 Extend Roadmap (new Epic planning)
+- [ ] T8.1 Curriculum Pipeline v1 (automated stage progression)
+- [ ] T8.2 Deterministic Evaluation Harness + Trend Reports
+- [ ] T8.3 Policy Export + Runtime Inference Mode
+- [ ] T9.1 Multi-Mode Replay Buffer + Sampling Strategy
+- [ ] T9.2 Offline RL Fine-Tuning (CQL/IQL baseline)
+- [ ] T9.3 Safety Guardrails for Tool Usage in Policy Loop
 
 ## EPIC 1: Observability & Determinism
 ### T1.1 Reward Breakdown + Debug Overlay
@@ -306,3 +295,77 @@ NEXT TASK: T7.1 Extend Roadmap (new Epic planning)
 - **Akzeptanztests:**
   - README enthält neue offene Tasks mit NEXT TASK Marker.
 - **Done Definition:** Fortlaufende Roadmap wieder vollständig planbar.
+
+## EPIC 8: RL Operations & Deployment Readiness
+### T8.1 Curriculum Pipeline v1 (automated stage progression)
+- **Problem:** Training springt aktuell unstrukturiert zwischen Schwierigkeitsgraden; dadurch ist Lernen instabil und schwer reproduzierbar.
+- **Scope:** src/agent/trainer.py, src/env/modes.py, src/main.py, src/logging/schema.py
+- **Deliverables:**
+  - Konfigurierbare Curriculum-Stages (z. B. ExitGame basic -> ExitGame hazards -> CTF basic)
+  - Automatischer Stage-Wechsel bei messbaren Kriterien (success rate / episodic return)
+  - Logging pro Episode: curriculum_stage, stage_transition_reason
+- **Akzeptanztests:**
+  - Headless train mit Curriculum über mehrere Stages zeigt mindestens einen automatischen Stage-Wechsel.
+  - SQLite enthält pro Episode den Stage-Namen.
+- **Done Definition:** Curriculum läuft ohne manuelle Eingriffe stabil durch Stage-Wechsel.
+
+### T8.2 Deterministic Evaluation Harness + Trend Reports
+- **Problem:** Fortschritt wird nicht konsistent gemessen; Metriken sind schwer vergleichbar.
+- **Scope:** src/eval/harness.py, src/main.py, src/logging/db.py
+- **Deliverables:**
+  - `eval` CLI mit fixierter Seed-Liste und Mode-Matrix
+  - KPIs: success rate, avg return, avg steps-to-goal, invalid action rate
+  - Trend-Report (JSON/CSV) für mehrere Checkpoints
+- **Akzeptanztests:**
+  - Zwei identische eval-runs auf gleichem Checkpoint liefern identische Kennzahlen.
+  - Report-Datei enthält alle KPIs je Mode.
+- **Done Definition:** Reproduzierbarer Eval-Standard vorhanden.
+
+### T8.3 Policy Export + Runtime Inference Mode
+- **Problem:** Trainierte Policies sind nicht als stabile Runtime-Artefakte nutzbar.
+- **Scope:** src/agent/policy.py, src/main.py, src/runtime/inference.py
+- **Deliverables:**
+  - Export eines trainierten Modells als versioniertes Artefakt
+  - Runtime-Inference-Modus ohne Trainingsabhängigkeiten
+  - Kompatibilitätscheck zwischen Environment-Observation-Schema und Export
+- **Akzeptanztests:**
+  - Export + Reload + Inference über 100 Steps ohne Crash.
+  - Schema-Mismatch bricht mit klarer Fehlermeldung ab.
+- **Done Definition:** Policy kann reproduzierbar exportiert und inferiert werden.
+
+## EPIC 9: Data-Centric RL & Safety
+### T9.1 Multi-Mode Replay Buffer + Sampling Strategy
+- **Problem:** Daten aus unterschiedlichen Modes werden nicht gezielt gewichtet; seltene, wertvolle Trajektorien gehen unter.
+- **Scope:** src/agent/replay_buffer.py, src/agent/trainer.py, src/logging/schema.py
+- **Deliverables:**
+  - Replay Buffer mit Mode-/Task-Tags
+  - Configurierbares Sampling (uniform, prioritized, mode-balanced)
+  - Buffer-Stats Logging (coverage pro Mode, sample entropy)
+- **Akzeptanztests:**
+  - mode-balanced Sampling zeigt annähernd ausgeglichene Batch-Anteile über 10k Samples.
+  - Buffer-Stats werden periodisch geloggt.
+- **Done Definition:** Datenabdeckung über Modes messbar und steuerbar.
+
+### T9.2 Offline RL Fine-Tuning (CQL/IQL baseline)
+- **Problem:** Gesammelte Demos/Logs werden nicht effizient für robustes Fine-Tuning genutzt.
+- **Scope:** src/agent/offline_rl.py, src/agent/trainer.py, src/logging/db.py
+- **Deliverables:**
+  - Offline-RL Training-Entry (CQL oder IQL Baseline)
+  - Import-Pipeline aus SQLite/Replay JSONL
+  - Vergleichsreport online vs. offline fine-tuned
+- **Akzeptanztests:**
+  - Offline-Run startet aus bestehenden Logs ohne Codeänderung.
+  - Fine-tuned Checkpoint erreicht mindestens Baseline-Performance.
+- **Done Definition:** Offline-Fine-Tuning als reproduzierbarer Pfad verfügbar.
+
+### T9.3 Safety Guardrails for Tool Usage in Policy Loop
+- **Problem:** Policies können riskante oder nutzlose Tool-Sequenzen ausführen, die Training und UX verschlechtern.
+- **Scope:** src/env/tools.py, src/agent/action_masking.py, src/agent/policy.py
+- **Deliverables:**
+  - Safety Ruleset für Tool-Calls (rate limits, cooldown, forbidden chains)
+  - Penalization + explainable rejection reasons im Log
+  - Optionaler "strict safety" Runtime-Flag
+- **Akzeptanztests:**
+  - Stress-Test: Tool-Spam wird begrenzt, invalid chain rate sinkt signifikant.
+  - Logs enthalten verständliche Rejection-Codes.
+- **Done Definition:** Tool-Nutzung ist robust begrenzt und nachvollziehbar.
