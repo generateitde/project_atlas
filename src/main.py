@@ -15,6 +15,7 @@ from src.console import Console
 from src.env.grid_env import GridEnv
 from src.env import encoding
 from src.human.input_keyboard import KeyboardController
+from src.human.chat_ui import format_action_choices, parse_human_action_choice
 from src.logging.db import DBLogger
 from src.logging.replay import export_steps
 from src.render.renderer import Renderer
@@ -117,6 +118,28 @@ class AtlasGame:
             self.env.world.atlas.exp = data.get("atlas", {}).get("exp", 0)
         self.trainer.load(self.env)
 
+
+    def _request_dagger_action(self, obs: dict) -> None:
+        choices = format_action_choices(obs.get("action_mask"))
+        self.env.world.messages.append(("Atlas (Frage)", f"Welche Aktion? {choices}"))
+        self.waiting_for_response = True
+
+    def _handle_human_query_response(self, obs: dict) -> None:
+        response = self.chat_buffer.strip()
+        self.chat_buffer = ""
+        self.waiting_for_response = False
+        if not response:
+            self.env.world.messages.append(("Atlas", "Keine Antwort erhalten, ich entscheide selbst."))
+            return
+        self.env.world.messages.append(("Human", response))
+        parsed_action = parse_human_action_choice(response, obs.get("action_mask"))
+        if parsed_action is None:
+            self.env.world.messages.append(("Atlas", "Antwort nicht als gültige Aktion erkannt."))
+            return
+        self.db.log_human_action(obs, parsed_action)
+        self.trainer.record_human_action(obs, parsed_action)
+        self.env.world.messages.append(("Atlas", f"Danke, ich nutze Aktion {parsed_action}."))
+
     def run(self) -> None:
         pygame.init()
         tile_size = self.config.rendering.tile_size
@@ -144,21 +167,21 @@ class AtlasGame:
                         self.console.last_message = self.console.execute(self, self.console.buffer)
                         self.console.buffer = ""
                     elif self.chat_active:
-                        message = self.chat_buffer.strip()
-                        if message:
-                            self.env.world.messages.append(("Human", message))
-                            if self.env.world.pending_question:
-                                self.env.world.pending_question = False
-                        self.chat_buffer = ""
-                        self.chat_active = False
+                        if self.waiting_for_response:
+                            self.chat_active = False
+                            self._handle_human_query_response(obs)
+                        else:
+                            message = self.chat_buffer.strip()
+                            if message:
+                                self.env.world.messages.append(("Human", message))
+                                if self.env.world.pending_question:
+                                    self.env.world.pending_question = False
+                            self.chat_buffer = ""
+                            self.chat_active = False
                     else:
                         self.chat_active = not self.chat_active
                         if not self.chat_active and self.waiting_for_response:
-                            response = self.chat_buffer.strip()
-                            if response:
-                                self.env.world.messages.append(("Human", response))
-                            self.chat_buffer = ""
-                            self.waiting_for_response = False
+                            self._handle_human_query_response(obs)
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
                     self.ai_paused = not self.ai_paused
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
@@ -219,8 +242,7 @@ class AtlasGame:
                     else:
                         self.last_uncertainty = 0.0
                 if self.ai_mode == "query" and self.trainer.should_query_human(stuck=self.last_stuck_state, uncertainty=self.last_uncertainty):
-                    self.env.world.messages.append(("Atlas (Frage)", "Was soll ich als Nächstes tun?"))
-                    self.waiting_for_response = True
+                    self._request_dagger_action(obs)
                 self.subgoal_text = self.trainer.update_goals(self.env.mode.name, self.env.mode.info())
                 self.db.log_step(obs, int(action), float(reward), bool(done), info, self.last_reward_terms)
                 self.episode_start = done

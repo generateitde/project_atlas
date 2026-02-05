@@ -91,7 +91,7 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T6.2 DAgger Queries + UI
+NEXT TASK: T6.3 Preference Reward Model
 
 ### Next Items
 - [x] T1.1 Reward Breakdown + Debug Overlay
@@ -108,7 +108,7 @@ NEXT TASK: T6.2 DAgger Queries + UI
 - [x] T5.2 Transformations
 - [x] T5.3 Fly Items + Floating Islands
 - [x] T6.1 Behavior Cloning Aux Loss richtig
-- [ ] T6.2 DAgger Queries + UI
+- [x] T6.2 DAgger Queries + UI
 
 ### Backlog
 - [ ] T6.3 Preference Reward Model
