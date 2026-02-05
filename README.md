@@ -91,7 +91,7 @@ python -m src.main export --db atlas.db --out replay.jsonl
 TODO / Roadmap
 =====================================================================
 
-NEXT TASK: T9.2 Offline RL Fine-Tuning (CQL/IQL baseline)
+NEXT TASK: T9.3 Safety Guardrails for Tool Usage in Policy Loop
 
 ### Next Items
 - [x] T6.3 Preference Reward Model
@@ -100,7 +100,7 @@ NEXT TASK: T9.2 Offline RL Fine-Tuning (CQL/IQL baseline)
 - [x] T8.2 Deterministic Evaluation Harness + Trend Reports
 - [x] T8.3 Policy Export + Runtime Inference Mode
 - [x] T9.1 Multi-Mode Replay Buffer + Sampling Strategy
-- [ ] T9.2 Offline RL Fine-Tuning (CQL/IQL baseline)
+- [x] T9.2 Offline RL Fine-Tuning (CQL/IQL baseline)
 - [ ] T9.3 Safety Guardrails for Tool Usage in Policy Loop
 
 ## EPIC 1: Observability & Determinism
@@ -364,6 +364,12 @@ NEXT TASK: T9.2 Offline RL Fine-Tuning (CQL/IQL baseline)
   - Offline-Run startet aus bestehenden Logs ohne Codeänderung.
   - Fine-tuned Checkpoint erreicht mindestens Baseline-Performance.
 - **Done Definition:** Offline-Fine-Tuning als reproduzierbarer Pfad verfügbar.
+- **Akzeptanztests (implementiert):**
+  - ✅ `python -m src.main offline-finetune --data atlas.db --steps 2000 --algorithm iql` startet Offline-Fine-Tuning direkt aus SQLite Logs.
+  - ✅ `python -m src.main offline-finetune --data replay.jsonl --steps 2000 --algorithm cql` nutzt Replay-JSONL als Datenquelle.
+  - ✅ `reports/offline_vs_online.json` enthält Baseline-vs-Offline Delta je Mode.
+  - ✅ `tests/test_offline_rl.py` validiert SQLite/JSONL Import sowie OfflineReplayEnv-Step.
+- **Status:** DONE
 
 ### T9.3 Safety Guardrails for Tool Usage in Policy Loop
 - **Problem:** Policies können riskante oder nutzlose Tool-Sequenzen ausführen, die Training und UX verschlechtern.

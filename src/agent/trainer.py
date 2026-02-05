@@ -7,6 +7,7 @@ from sb3_contrib import RecurrentPPO
 
 from src.agent.dagger import DAgger
 from src.agent.imitation import ImitationBuffer
+from src.agent.offline_rl import OfflineReplayEnv, OfflineTransition
 from src.agent.policy import build_model
 from src.agent.preference_reward import PreferenceRewardModel, extract_state_features
 from src.agent.replay_buffer import MultiModeReplayBuffer, ReplayTransition, SamplingStrategy
@@ -107,6 +108,28 @@ class AtlasTrainer:
         if self.model is None:
             raise RuntimeError("Model not initialized")
         self.model.learn(total_timesteps=total_steps, reset_num_timesteps=False)
+
+    def offline_fine_tune(
+        self,
+        *,
+        online_env,
+        transitions: list[OfflineTransition],
+        total_steps: int,
+        algorithm: str = "iql",
+        episode_horizon: int = 128,
+    ) -> None:
+        if self.model is None:
+            raise RuntimeError("Model not initialized")
+        offline_env = OfflineReplayEnv(
+            transitions=transitions,
+            observation_space=online_env.observation_space,
+            action_space=online_env.action_space,
+            algorithm=algorithm,
+            episode_horizon=episode_horizon,
+        )
+        self.model.set_env(offline_env)
+        self.model.learn(total_timesteps=total_steps, reset_num_timesteps=False)
+        self.model.set_env(online_env)
 
     def predict(self, obs, state=None, mask=None):
         if self.model is None:

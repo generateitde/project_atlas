@@ -155,3 +155,8 @@ def write_eval_trend_report(rows: list[dict[str, Any]], json_path: Path, csv_pat
             )
         )
     csv_path.write_text("".join(lines), encoding="utf-8")
+
+
+def write_offline_comparison_report(rows: list[dict[str, Any]], out_path: Path) -> None:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps({"rows": rows}, indent=2), encoding="utf-8")
