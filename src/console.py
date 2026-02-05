@@ -17,7 +17,7 @@ class Console:
         default_factory=lambda: (
             "help | seed set <seed> | world list | world switch <preset> <seed> | mode set <mode> <json_params> | "
             "goal set <text> | ai mode <explore|query> | control <human|ai_atlas> | enemy spawn <type> <x> <y> <hp> <exp> | "
-            "item spawn <type> <x> <y> | teleport <human|ai_atlas> <x> <y> | pause ai | resume ai | "
+            "item spawn <type> <x> <y> | hide set <x> [y] | teleport <human|ai_atlas> <x> <y> | pause ai | resume ai | "
             "save | load | reset episode | print state | print map | agent info"
         )
     )
@@ -44,6 +44,15 @@ class Console:
             params = json.loads(" ".join(parts[3:]) or "{}")
             game.env.set_mode(mode_name, params)
             return f"mode set to {mode_name}"
+        if parts[:2] == ["hide", "set"] and len(parts) >= 3:
+            if game.env.mode.name != "HideAndSeek":
+                return "hide marker requires HideAndSeek mode"
+            x, y = int(parts[2]), int(parts[3]) if len(parts) >= 4 else game.env.world.human.pos.as_int()[1]
+            if not game.env.world.in_bounds((x, y)):
+                return "hide marker out of bounds"
+            game.env.mode.hide_target = (x, y)
+            game.env.mode.reset(game.env.world, game.env.rng)
+            return f"hide marker set to ({x}, {y})"
         if parts[:2] == ["goal", "set"] and len(parts) >= 3:
             raw_goal = " ".join(parts[2:]).strip()
             goal_text = raw_goal

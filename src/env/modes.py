@@ -125,27 +125,62 @@ class ExitGame(Mode):
 class HideAndSeek(Mode):
     name: str = "HideAndSeek"
     hide_target: tuple[int, int] | None = None
+    time_limit_steps: int | None = None
+    _prev_distance: int | None = None
+    _steps_elapsed: int = 0
 
     def reset(self, world, rng: RNG) -> ModeState:
+        self._steps_elapsed = 0
+        self._prev_distance = None
+        if self.hide_target:
+            atlas_x, atlas_y = world.atlas.pos.as_int()
+            self._prev_distance = abs(atlas_x - self.hide_target[0]) + abs(atlas_y - self.hide_target[1])
         status = "Hide target set." if self.hide_target else "No hide target set."
         self.state = HideAndSeekState(
             name=self.name,
             objective="Find the hide target.",
             status=status,
             hide_target=self.hide_target,
+            details={"time_limit_steps": self.time_limit_steps, "steps_elapsed": self._steps_elapsed},
         )
         return self.state
 
     def step(self, world, events: list[Event], rng: RNG) -> tuple[float, list[Event], bool, dict[str, Any]]:
         reward = 0.0
         done = False
-        if self.hide_target and world.atlas.pos.as_int() == self.hide_target:
-            reward += 5.0
+        self._steps_elapsed += 1
+        mode_events: list[Event] = []
+
+        if self.hide_target:
+            atlas_x, atlas_y = world.atlas.pos.as_int()
+            curr_distance = abs(atlas_x - self.hide_target[0]) + abs(atlas_y - self.hide_target[1])
+            if self._prev_distance is not None and curr_distance != self._prev_distance:
+                reward += 0.1 * float(self._prev_distance - curr_distance)
+            self._prev_distance = curr_distance
+
+            if curr_distance == 0:
+                reward += 5.0
+                done = True
+                mode_events.append(Event("hide_target_found", {"target": self.hide_target, "steps": self._steps_elapsed}))
+
+        if self.time_limit_steps is not None and self._steps_elapsed >= self.time_limit_steps and not done:
             done = True
+            mode_events.append(Event("hide_time_limit", {"steps": self._steps_elapsed}))
+
         if self.state and isinstance(self.state, HideAndSeekState):
             self.state.done = done
-            self.state.status = "Target found!" if done else (self.state.status or "Searching for target.")
-        return reward, [], done, self.info()
+            self.state.details["steps_elapsed"] = self._steps_elapsed
+            if self.hide_target:
+                self.state.details["distance"] = self._prev_distance
+            if done and self.hide_target and world.atlas.pos.as_int() == self.hide_target:
+                self.state.status = "Target found!"
+            elif done:
+                self.state.status = "Time limit reached."
+            elif self.hide_target:
+                self.state.status = f"Distance to hide target: {self._prev_distance}"
+            else:
+                self.state.status = "No hide target set."
+        return reward, mode_events, done, self.info()
 
 
 @dataclass
