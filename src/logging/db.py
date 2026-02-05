@@ -118,3 +118,26 @@ class DBLogger:
             )
             session.add(row)
             session.commit()
+
+
+def write_eval_trend_report(rows: list[dict[str, Any]], json_path: Path, csv_path: Path) -> None:
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"rows": rows}
+    json_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    header = "checkpoint,mode,episodes,success_rate,avg_return,avg_steps_to_goal,invalid_action_rate\n"
+    lines = [header]
+    for row in rows:
+        lines.append(
+            "{checkpoint},{mode},{episodes},{success_rate:.6f},{avg_return:.6f},{avg_steps_to_goal},{invalid_action_rate:.6f}\n".format(
+                checkpoint=row["checkpoint"],
+                mode=row["mode"],
+                episodes=row["episodes"],
+                success_rate=row["success_rate"],
+                avg_return=row["avg_return"],
+                avg_steps_to_goal="" if row["avg_steps_to_goal"] is None else f"{row['avg_steps_to_goal']:.6f}",
+                invalid_action_rate=row["invalid_action_rate"],
+            )
+        )
+    csv_path.write_text("".join(lines), encoding="utf-8")

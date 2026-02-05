@@ -16,9 +16,10 @@ from src.env import encoding
 from src.human.input_keyboard import KeyboardController
 from src.human.chat_ui import format_action_choices, parse_human_action_choice
 from src.agent.preference_reward import extract_state_features, parse_scored_feedback
-from src.logging.db import DBLogger
+from src.logging.db import DBLogger, write_eval_trend_report
 from src.logging.replay import export_steps
 from src.render.renderer import Renderer
+from src.eval.harness import DeterministicEvalHarness
 
 
 class AtlasGame:
@@ -384,6 +385,26 @@ def export_replay(db_path: Path, out_path: Path) -> None:
     export_steps(db_path, out_path)
 
 
+
+
+def run_eval(config_path: Path | None, checkpoint_paths: list[Path] | None = None) -> None:
+    config = load_config(config_path)
+    checkpoints = checkpoint_paths or [Path("checkpoints/atlas_model.zip")]
+    seeds = [11, 23, 37, 49, 61]
+    mode_matrix = [
+        ("ExitGame", {}),
+        ("CaptureTheFlag", {}),
+        ("HideAndSeek", {"hide_target": (2, 2), "time_limit_steps": 120}),
+    ]
+    harness = DeterministicEvalHarness(config, Path("checkpoints"))
+    report = harness.evaluate(checkpoints=checkpoints, seeds=seeds, mode_matrix=mode_matrix)
+    out_dir = Path("reports")
+    json_path = out_dir / "eval_trends.json"
+    csv_path = out_dir / "eval_trends.csv"
+    write_eval_trend_report(report.get("rows", []), json_path, csv_path)
+    print(f"Eval report written: {json_path} and {csv_path}")
+
+
 def main() -> None:
     load_dotenv()
     parser = argparse.ArgumentParser(description="Atlas RL Grid")
@@ -403,6 +424,9 @@ def main() -> None:
     export_cmd.add_argument("--db", type=Path, default=Path("atlas.db"))
     export_cmd.add_argument("--out", type=Path, default=Path("replay.jsonl"))
 
+    eval_cmd = subparsers.add_parser("eval")
+    eval_cmd.add_argument("--checkpoints", nargs="*", type=Path, default=None)
+
     args = parser.parse_args()
     if args.command == "train":
         train_headless(args.config, args.steps)
@@ -410,6 +434,8 @@ def main() -> None:
         resume_training(args.config, args.steps)
     elif args.command == "export":
         export_replay(args.db, args.out)
+    elif args.command == "eval":
+        run_eval(args.config, args.checkpoints)
     else:
         AtlasGame(args.config).run()
 
