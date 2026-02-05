@@ -25,7 +25,15 @@ class DBLogger:
             self.episode_id = episode.id
             self.tick = 0
 
-    def log_step(self, obs: dict[str, Any], action: int, reward: float, done: bool, info: dict[str, Any]) -> None:
+    def log_step(
+        self,
+        obs: dict[str, Any],
+        action: int,
+        reward: float,
+        done: bool,
+        info: dict[str, Any],
+        reward_terms: dict[str, Any] | None = None,
+    ) -> None:
         if self.episode_id is None:
             return
         with Session(self.engine) as session:
@@ -36,6 +44,7 @@ class DBLogger:
                 action_int=action,
                 action_json=json.dumps({"action": action}),
                 reward_float=reward,
+                reward_terms_json=json.dumps(reward_terms, default=str) if reward_terms is not None else None,
                 done_bool=done,
                 info_json=json.dumps(info, default=str),
             )

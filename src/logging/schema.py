@@ -24,6 +24,7 @@ class Step(Base):
     action_int = Column(Integer)
     action_json = Column(Text)
     reward_float = Column(Float)
+    reward_terms_json = Column(Text)
     done_bool = Column(Boolean)
     info_json = Column(Text)
 

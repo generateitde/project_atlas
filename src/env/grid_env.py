@@ -154,7 +154,10 @@ class GridEnv(gym.Env):
         _apply_vertical_motion(self.world, self.world.human)
 
         mode_reward, mode_events, done, info = self.mode.step(self.world, events, self.rng)
-        reward = compute_reward(mode_reward, events + mode_events)
+        reward, reward_terms = compute_reward(mode_reward, events + mode_events)
+        if info is None:
+            info = {}
+        info["reward_terms"] = reward_terms
         self._steps += 1
         if self._steps >= self.config.world.max_episode_steps:
             done = True
