@@ -34,3 +34,13 @@ def find_item_by_id(items: list, item_id: str):
         if getattr(item, "item_id", None) == item_id:
             return item
     return None
+
+
+def find_tiles(tiles, tile_type) -> list[tuple[int, int]]:
+    positions: list[tuple[int, int]] = []
+    for y in range(tiles.shape[0]):
+        for x in range(tiles.shape[1]):
+            if tiles[y, x] == tile_type:
+                positions.append((x, y))
+    return positions
+

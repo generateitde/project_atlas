@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from src.core.events import Event
 from src.core.rng import RNG
 from src.core.types import TileType
+from src.env import rules
 
 
 class ModeState(BaseModel):
@@ -34,6 +35,9 @@ class HideAndSeekState(ModeState):
 
 class CaptureTheFlagState(ModeState):
     atlas_has_flag: bool = False
+    flag_pos: tuple[int, int] | None = None
+    score_zone: tuple[int, int] | None = None
+    score: int = 0
 
 
 class TrainingArenaState(ModeState):
@@ -149,22 +153,51 @@ class CaptureTheFlag(Mode):
     name: str = "CaptureTheFlag"
 
     def reset(self, world, rng: RNG) -> ModeState:
+        flag_positions = rules.find_tiles(world.tiles, TileType.FLAG)
+        score_zone = (2, world.tiles.shape[0] - 2)
         self.state = CaptureTheFlagState(
             name=self.name,
-            objective="Capture the flag and return it.",
+            objective="Capture the flag and return it to score.",
             status="Find the flag.",
             atlas_has_flag=world.atlas_has_flag,
+            flag_pos=flag_positions[0] if flag_positions else None,
+            score_zone=score_zone,
+            score=0,
         )
+        world.atlas_has_flag = False
         return self.state
 
     def step(self, world, events: list[Event], rng: RNG) -> tuple[float, list[Event], bool, dict[str, Any]]:
         reward = 0.0
-        if world.atlas_has_flag:
-            reward += 0.1
+        done = False
+        mode_events: list[Event] = []
+        atlas_pos = world.atlas.pos.as_int()
+
         if self.state and isinstance(self.state, CaptureTheFlagState):
+            if not world.atlas_has_flag and self.state.flag_pos and atlas_pos == self.state.flag_pos:
+                world.atlas_has_flag = True
+                reward += 1.0
+                mode_events.append(Event("ctf_flag_pickup", {"pos": self.state.flag_pos}))
+
+            if world.atlas_has_flag:
+                reward += 0.1
+
+            if world.atlas_has_flag and self.state.score_zone and atlas_pos == self.state.score_zone:
+                world.atlas_has_flag = False
+                self.state.score += 1
+                reward += 5.0
+                done = True
+                mode_events.append(Event("ctf_scored", {"score": self.state.score}))
+
             self.state.atlas_has_flag = world.atlas_has_flag
-            self.state.status = "Carrying flag." if world.atlas_has_flag else "Find the flag."
-        return reward, [], False, self.info()
+            self.state.done = done
+            if done:
+                self.state.status = "Scored!"
+            elif world.atlas_has_flag:
+                self.state.status = "Return to score zone."
+            else:
+                self.state.status = "Find the flag."
+        return reward, mode_events, done, self.info()
 
 
 @dataclass
