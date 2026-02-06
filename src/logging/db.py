@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
 from src.logging.schema import Base, Episode, Event, HumanAction, HumanFeedback, ReplayBufferStat, Step
@@ -14,8 +14,26 @@ class DBLogger:
     def __init__(self, path: Path) -> None:
         self.engine = create_engine(f"sqlite:///{path}")
         Base.metadata.create_all(self.engine)
+        self._ensure_episode_columns()
         self.episode_id: int | None = None
         self.tick = 0
+
+    def _ensure_episode_columns(self) -> None:
+        if self.engine.dialect.name != "sqlite":
+            return
+        with self.engine.begin() as connection:
+            result = connection.execute(text("PRAGMA table_info(episodes)"))
+            existing = {row[1] for row in result}
+            columns = {
+                "world_hash": "VARCHAR(64)",
+                "curriculum_stage": "VARCHAR(64)",
+                "stage_transition_reason": "TEXT",
+            }
+            for column, column_type in columns.items():
+                if column not in existing:
+                    connection.execute(
+                        text(f"ALTER TABLE episodes ADD COLUMN {column} {column_type}")
+                    )
 
     def start_episode(
         self,
