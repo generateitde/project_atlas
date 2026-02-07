@@ -34,16 +34,28 @@ def floating_islands(width: int, height: int, rng: RNG) -> np.ndarray:
     for x in range(2, width - 2):
         tiles[ground_y, x] = TileType.EMPTY
 
-    # Create elevated islands with larger vertical gaps than the baseline jump impulse.
+    # Build a reachable staircase of platforms for platformer movement.
+    step_x = 4
+    step_y = ground_y - 2
+    last_step_x = step_x
+    last_step_y = step_y
+    while step_x < width - 4 and step_y > 2:
+        tiles[step_y, step_x - 1 : step_x + 2] = TileType.PLATFORM
+        last_step_x = step_x
+        last_step_y = step_y
+        step_x += 4
+        step_y -= 2
+
+    # Create additional floating islands above the staircase.
     top_band = max(2, height // 4)
-    for _ in range(8):
+    for _ in range(6):
         cx = rng.randint(3, width - 4)
         cy = rng.randint(2, top_band)
         tiles[cy, cx - 1 : cx + 2] = TileType.PLATFORM
 
-    # Ensure there is always at least one high, isolated goal island.
-    goal_x = width - 3
-    goal_y = 2
+    # Place the goal on the last staircase platform so it is reachable.
+    goal_x = min(width - 3, last_step_x)
+    goal_y = max(2, last_step_y)
     tiles[goal_y, goal_x - 1 : goal_x + 1] = TileType.PLATFORM
     tiles[goal_y - 1, goal_x] = TileType.GOAL
     return tiles

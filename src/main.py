@@ -44,6 +44,7 @@ class AtlasGame:
         self.subgoal_text = "explore"
         self.renderer = None
         self.keyboard = KeyboardController(self.env.world, self.config.controls)
+        self.console_keys: set[int] = set()
         self.trainer = AtlasTrainer(self.config, Path("checkpoints"))
         self.trainer.load(self.env)
         self.db = DBLogger(Path("atlas.db"))
@@ -163,6 +164,7 @@ class AtlasGame:
 
     def run(self) -> None:
         pygame.init()
+        self.console_keys = self._console_key_codes()
         tile_size = self.config.rendering.tile_size
         width = self.config.world.width
         height = self.config.world.height
@@ -179,7 +181,7 @@ class AtlasGame:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-                if event.type == pygame.KEYDOWN and event.key in (pygame.K_BACKQUOTE, pygame.K_F1):
+                if event.type == pygame.KEYDOWN and event.key in self.console_keys:
                     self.console.active = not self.console.active
                     if self.console.active:
                         self.chat_active = False
@@ -317,6 +319,17 @@ class AtlasGame:
             pygame.display.flip()
             clock.tick(self.config.rendering.fps)
         pygame.quit()
+
+    def _console_key_codes(self) -> set[int]:
+        keys: set[int] = set()
+        for name in self.config.controls.console:
+            try:
+                keys.add(pygame.key.key_code(name))
+            except (ValueError, KeyError):
+                continue
+        if not keys:
+            keys.update({pygame.K_BACKQUOTE, pygame.K_F1})
+        return keys
 
     def _create_display(self, width: int, height: int, tile_size: int) -> pygame.Surface:
         flags = pygame.FULLSCREEN if self.fullscreen else 0
