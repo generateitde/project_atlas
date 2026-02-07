@@ -32,6 +32,7 @@ class ControlsConfig(BaseModel):
     jump: list[str]
     break_tile: list[str]
     inspect: list[str]
+    console: list[str]
 
 
 class TrainingConfig(BaseModel):

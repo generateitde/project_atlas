@@ -17,6 +17,7 @@ controls:
   jump: ["space", "w", "up"]
   break_tile: ["b"]
   inspect: ["i"]
+  console: ["f1", "f2", "backquote"]
 training:
   algo: "recurrent_ppo"
   n_envs: 4
